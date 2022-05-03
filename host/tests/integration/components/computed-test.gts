@@ -23,6 +23,24 @@ module('Integration | computeds', function (hooks) {
     assert.strictEqual(this.element.textContent!.trim(), 'Mango Abdel-Rahman');
   });
 
+  test('can render a synchronous computed field (using a string in `computeVia`)', async function(assert) {
+    class Person extends Card {
+      @field firstName = contains(StringCard);
+      @field lastName = contains(StringCard);
+      @field fullName = contains(StringCard, { computeVia: 'getFullName'});
+      getFullName() {
+        return `${this.firstName} ${this.lastName}`;
+      }
+      static isolated = class Isolated extends Component<typeof this> {
+        <template><@fields.fullName/></template>
+      }
+    }
+
+    let mango = new Person({ firstName: 'Mango', lastName: 'Abdel-Rahman' });
+    await renderCard(mango, 'isolated');
+    assert.strictEqual(this.element.textContent!.trim(), 'Mango Abdel-Rahman');
+  });
+
   test('can render a computed that consumes a nested property', async function(assert) {
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -86,7 +104,7 @@ module('Integration | computeds', function (hooks) {
     assert.strictEqual(this.element.textContent!.trim(), 'Mango');
   });
 
-  test('can render an asynchronous computed field (using an unnamed function)', async function(assert) {
+  test('can render an asynchronous computed field (using an async function in `computeVia`)', async function(assert) {
     class Person extends Card {
       @field firstName = contains(StringCard);
       @field slowName = contains(StringCard, { computeVia: async function(this: Person) {
