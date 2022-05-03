@@ -86,6 +86,23 @@ module('Integration | computeds', function (hooks) {
     assert.strictEqual(this.element.textContent!.trim(), 'Mango');
   });
 
+  test('can render an asynchronous computed field (using an unnamed function)', async function(assert) {
+    class Person extends Card {
+      @field firstName = contains(StringCard);
+      @field slowName = contains(StringCard, { computeVia: async function(this: Person) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return this.firstName;
+      }});
+      static isolated = class Isolated extends Component<typeof this> {
+        <template><@fields.slowName/></template>
+      }
+    }
+
+    let mango = new Person({ firstName: 'Mango'});
+    await renderCard(mango, 'isolated');
+    assert.strictEqual(this.element.textContent!.trim(), 'Mango');
+  });
+
   test('can indirectly render an asynchronous computed field', async function(assert) {
     class Person extends Card {
       @field firstName = contains(StringCard);
