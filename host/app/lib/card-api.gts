@@ -3,6 +3,7 @@ import { ComponentLike } from '@glint/template';
 import { NotReady, isNotReadyError} from './not-ready';
 import flatMap from 'lodash/flatMap';
 import { TrackedWeakMap } from 'tracked-built-ins';
+import * as JSON from 'json-typescript';
 
 export const primitive = Symbol('cardstack-primitive');
 export const serialize = Symbol('cardstack-serialize');
@@ -17,6 +18,11 @@ type FieldsTypeFor<T extends Card> = {
 }
 
 type Setter = { setters: { [fieldName: string]: Setter }} & ((value: any) => void);
+
+interface ResourceObject {
+  type: string;
+  attributes?: JSON.Object | ResourceObject | undefined;
+}
 
 export type Format = 'isolated' | 'embedded' | 'edit';
 
@@ -52,6 +58,10 @@ export class Card {
     if (data) {
       Object.assign(this, data);
     }
+  }
+
+  static serialize<T extends Constructable>(model: InstanceType<T>): ResourceObject {
+    return serializeCard(model);
   }
 }
 
@@ -109,6 +119,23 @@ export function serializedSet<CardT extends Constructable>(model: InstanceType<C
     serialized.set(fieldName, instance);
   }
   deserialized.delete(fieldName);
+}
+
+function serializeCard<T extends Constructable>(model: InstanceType<T>): ResourceObject {
+  let attributes: JSON.Object | ResourceObject = {};
+  let resource: ResourceObject = {
+    type: model.constructor.name
+  }
+  for (let [fieldName, field] of Object.entries(getFields(model))) {
+    if (primitive in field) {
+      let value = serializedGet(model, fieldName);
+      attributes[fieldName] = value;
+    } else {
+      attributes[fieldName] = serializeCard(model[fieldName]);
+    }
+  }
+  resource.attributes = attributes;
+  return resource;
 }
 
 export function contains<CardT extends Constructable>(card: CardT, options?: Options): CardInstanceType<CardT> {

@@ -117,7 +117,7 @@ module('Integration | serialization', function (hooks) {
   test('can serialize a computed field', async function(assert) {
     class Person extends Card {
       @field birthdate = contains(DateCard);
-      @field firstBirthday = contains(DateCard, { computeVia: 
+      @field firstBirthday = contains(DateCard, { computeVia:
         function(this: Person) {
           return new Date(this.birthdate.getFullYear() + 1, this.birthdate.getMonth(), this.birthdate.getDate());
         }
@@ -134,4 +134,63 @@ module('Integration | serialization', function (hooks) {
 
   skip('can deserialize a containsMany field');
   skip('can serialize a containsMany field');
+
+  test('can serialize a card with primitive fields', async function (assert) {
+    class Post extends Card {
+      @field title = contains(StringCard);
+      @field created = contains(DateCard);
+      @field published = contains(DatetimeCard);
+    }
+    let firstPost =  new Post({ title: 'First Post', created: p('2022-04-22'), published: parseISO('2022-04-27T16:30+00:00') });
+    await renderCard(firstPost, 'isolated');
+    let payload = await Post.serialize(firstPost);
+
+    assert.deepEqual(
+      payload as any,
+      {
+        type: 'Post',
+        attributes: {
+          title: 'First Post',
+          created: '2022-04-22',
+          published: '2022-04-27T16:30:00.000Z',
+        },
+      },
+      'A model can be serialized once instantiated'
+    );
+  });
+
+  test('can serialize a card with composite field', async function (assert) {
+    class Person extends Card {
+      @field firstName = contains(StringCard);
+    }
+
+    class Post extends Card {
+      @field title = contains(StringCard);
+      @field author = contains(Person);
+    }
+
+    let firstPost =  new Post({ title: 'First Post', author: { firstName: 'Mango' } });
+
+    await renderCard(firstPost, 'isolated');
+    let payload = await Post.serialize(firstPost);
+
+    assert.deepEqual(
+      payload as any,
+      {
+        type: 'Post',
+        attributes: {
+          title: 'First Post',
+          author: {
+            type: 'Person',
+            attributes: {
+              firstName: 'Mango',
+            }
+          }
+        },
+      },
+      'A model can be serialized once instantiated'
+    );
+  });
+
+  skip('can serialize a card with computed fields', async function () {});
 });
