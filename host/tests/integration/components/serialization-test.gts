@@ -144,7 +144,6 @@ module('Integration | serialization', function (hooks) {
     let firstPost =  new Post({ title: 'First Post', created: p('2022-04-22'), published: parseISO('2022-04-27T16:30+00:00') });
     await renderCard(firstPost, 'isolated');
     let payload = await Post.serialize(firstPost);
-
     assert.deepEqual(
       payload as any,
       {
@@ -163,17 +162,13 @@ module('Integration | serialization', function (hooks) {
     class Person extends Card {
       @field firstName = contains(StringCard);
     }
-
     class Post extends Card {
       @field title = contains(StringCard);
       @field author = contains(Person);
     }
-
     let firstPost =  new Post({ title: 'First Post', author: { firstName: 'Mango' } });
-
     await renderCard(firstPost, 'isolated');
     let payload = await Post.serialize(firstPost);
-
     assert.deepEqual(
       payload as any,
       {
@@ -187,10 +182,31 @@ module('Integration | serialization', function (hooks) {
             }
           }
         },
-      },
-      'A model can be serialized once instantiated'
+      }
     );
   });
 
-  skip('can serialize a card with computed fields', async function () {});
+  test('can serialize a card with computed field', async function (assert) {
+    class Person extends Card {
+      @field birthdate = contains(DateCard);
+      @field firstBirthday = contains(DateCard, { computeVia:
+        function(this: Person) {
+          return new Date(this.birthdate.getFullYear() + 1, this.birthdate.getMonth(), this.birthdate.getDate());
+        }
+      });
+    }
+    let mango = new Person({ birthdate: p('2019-10-30') });
+    await renderCard(mango, 'isolated');
+    let payload = await Person.serialize(mango);
+    assert.deepEqual(
+      payload as any,
+      {
+        type: 'Person',
+        attributes: {
+          birthdate: '2019-10-30',
+          firstBirthday: '2020-10-30',
+        },
+      }
+    );
+  });
 });
