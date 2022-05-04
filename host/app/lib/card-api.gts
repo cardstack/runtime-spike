@@ -19,9 +19,12 @@ type FieldsTypeFor<T extends Card> = {
 
 type Setter = { setters: { [fieldName: string]: Setter }} & ((value: any) => void);
 
-interface ResourceObject extends JSON.Object {
+interface ResourceObject {
+  // id: string; // TODO
   type: string;
-  attributes: JSON.Object;
+  attributes?: JSON.Object;
+  relationships?: JSON.Object;
+  meta?: JSON.Object;
 }
 
 export type Format = 'isolated' | 'embedded' | 'edit';
@@ -58,10 +61,6 @@ export class Card {
     if (data) {
       Object.assign(this, data);
     }
-  }
-
-  static serialize<CardT extends Constructable>(model: InstanceType<CardT>): ResourceObject {
-    return serializeCard(model);
   }
 }
 
@@ -121,20 +120,16 @@ export function serializedSet<CardT extends Constructable>(model: InstanceType<C
   deserialized.delete(fieldName);
 }
 
-function serializeCard<CardT extends Constructable>(model: InstanceType<CardT>): ResourceObject {
+export function serializeCard<CardT extends Constructable>(model: InstanceType<CardT>): ResourceObject {
   let resource: ResourceObject = {
-    type: model.constructor.name,
-    attributes: {},
-  }
-  for (let [fieldName, field] of Object.entries(getFields(model))) {
-    if (primitive in field) {
-      let value = serializedGet(model, fieldName);
+    type: model.constructor.name.toLowerCase(),
+  };
+
+  for (let fieldName of Object.keys(getFields(model))) {
+    let value = serializedGet(model, fieldName);
+    if (value) {
+      resource.attributes = resource.attributes || {};
       resource.attributes[fieldName] = value;
-    } else {
-      let value = (model as any)[fieldName];
-      if (isBaseCard in value) {
-        resource.attributes[fieldName] = serializeCard(value);
-      }
     }
   }
   return resource;

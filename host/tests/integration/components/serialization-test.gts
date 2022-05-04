@@ -2,7 +2,7 @@ import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import stringify from 'fast-json-stable-stringify'
 import { renderCard } from '../../helpers/render-component';
-import { contains, field, Component, Card, serializedGet } from 'runtime-spike/lib/card-api';
+import { contains, field, Component, Card, serializedGet, serializeCard } from 'runtime-spike/lib/card-api';
 import StringCard from 'runtime-spike/lib/string';
 import DateCard from 'runtime-spike/lib/date';
 import DatetimeCard from 'runtime-spike/lib/datetime';
@@ -141,13 +141,13 @@ module('Integration | serialization', function (hooks) {
       @field created = contains(DateCard);
       @field published = contains(DatetimeCard);
     }
-    let firstPost =  new Post({ title: 'First Post', created: p('2022-04-22'), published: parseISO('2022-04-27T16:30+00:00') });
+    let firstPost = new Post({ title: 'First Post', created: p('2022-04-22'), published: parseISO('2022-04-27T16:30+00:00') });
     await renderCard(firstPost, 'isolated');
-    let payload = await Post.serialize(firstPost);
+    let payload = serializeCard(firstPost);
     assert.deepEqual(
       payload as any,
       {
-        type: 'Post',
+        type: 'post',
         attributes: {
           title: 'First Post',
           created: '2022-04-22',
@@ -159,27 +159,30 @@ module('Integration | serialization', function (hooks) {
   });
 
   test('can serialize a card with composite field', async function (assert) {
-    class Person extends Card {
+    class Animal extends Card {
+      @field species = contains(StringCard);
+    }
+    class Person extends Animal {
       @field firstName = contains(StringCard);
+      @field birthdate = contains(DateCard);
     }
     class Post extends Card {
       @field title = contains(StringCard);
       @field author = contains(Person);
     }
-    let firstPost =  new Post({ title: 'First Post', author: { firstName: 'Mango' } });
+    let firstPost = new Post({ title: 'First Post', author: { firstName: 'Mango', birthdate: p('2019-10-30'), species: 'canis familiaris' } });
     await renderCard(firstPost, 'isolated');
-    let payload = await Post.serialize(firstPost);
+    let payload = serializeCard(firstPost);
     assert.deepEqual(
       payload as any,
       {
-        type: 'Post',
+        type: 'post',
         attributes: {
           title: 'First Post',
           author: {
-            type: 'Person',
-            attributes: {
-              firstName: 'Mango',
-            }
+            firstName: 'Mango',
+            birthdate: '2019-10-30',
+            species: 'canis familiaris',
           }
         },
       }
@@ -197,11 +200,11 @@ module('Integration | serialization', function (hooks) {
     }
     let mango = new Person({ birthdate: p('2019-10-30') });
     await renderCard(mango, 'isolated');
-    let payload = await Person.serialize(mango);
+    let payload = serializeCard(mango);
     assert.deepEqual(
       payload as any,
       {
-        type: 'Person',
+        type: 'person',
         attributes: {
           birthdate: '2019-10-30',
           firstBirthday: '2020-10-30',
