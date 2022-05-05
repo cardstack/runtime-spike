@@ -147,7 +147,7 @@ module('Integration | serialization', function (hooks) {
     assert.deepEqual(
       payload as any,
       {
-        type: 'post',
+        type: 'card',
         attributes: {
           title: 'First Post',
           created: '2022-04-22',
@@ -176,7 +176,7 @@ module('Integration | serialization', function (hooks) {
     assert.deepEqual(
       payload as any,
       {
-        type: 'post',
+        type: 'card',
         attributes: {
           title: 'First Post',
           author: {
@@ -204,7 +204,7 @@ module('Integration | serialization', function (hooks) {
     assert.deepEqual(
       payload as any,
       {
-        type: 'person',
+        type: 'card',
         attributes: {
           birthdate: '2019-10-30',
           firstBirthday: '2020-10-30',

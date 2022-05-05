@@ -133,7 +133,7 @@ export function serializedSet<CardT extends Constructable>(model: InstanceType<C
 
 export function serializeCard<CardT extends Constructable>(model: InstanceType<CardT>): ResourceObject {
   let resource: ResourceObject = {
-    type: model.constructor.name.toLowerCase(),
+    type: 'card',
   };
 
   for (let fieldName of Object.keys(getFields(model))) {
