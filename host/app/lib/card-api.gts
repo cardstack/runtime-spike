@@ -42,6 +42,7 @@ interface Options {
 const deserializedData = new WeakMap<Card, Map<string, any>>();
 const serializedData = new WeakMap<Card, Map<string, any>>();
 const recomputePromises = new WeakMap<Card, Promise<any>>();
+const componentCache = new WeakMap<object, Map<string, ComponentLike<{ Args: never; Blocks: never; }>>>();
 
 // our place for notifying Glimmer when a card is ready to re-render (which will
 // involve rerunning async computed fields)
@@ -499,17 +500,32 @@ function getFields<T extends Card>(card: T, onlyComputeds = false): { [P in keyo
 }
 
 function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFormat: Format, set?: Setter): FieldsTypeFor<T> {
+  function getCachedComponent(target: object, property: string, makeComponent: () => ComponentLike<{ Args: never, Blocks: never }>) {
+    let component = componentCache.get(target)?.get(property);
+    if (!component) {
+      component = makeComponent();
+      let targetCache = componentCache.get(target);
+      if (!targetCache) {
+        targetCache = new Map();
+        componentCache.set(target, targetCache);
+      }
+      targetCache.set(property, component);
+    }
+    return component;
+  }
+
   return new Proxy(target, {
     get(target, property, received) {
       if (typeof property === 'symbol' || model == null) {
         // don't handle symbols or nulls
         return Reflect.get(target, property, received);
       }
-      let field = getField(model.constructor, property);
-      if (!field) {
+      let _field = getField(model.constructor, property);
+      if (!_field) {
         // field doesn't exist, fall back to normal property access behavior
         return Reflect.get(target, property, received);
       }
+      let field = _field;
       let innerModel = (model as any)[property];
       defaultFormat = isFieldComputed(model.constructor, property) ? 'embedded' : defaultFormat;
 
@@ -519,7 +535,7 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
         }
         let setters = innerModel.map((_el: any, i: number) => makeSetter(model, property, i));
         let fieldName = property; // to get around lint error
-        return class ContainsManyEditorTemplate extends GlimmerComponent {
+        return getCachedComponent(target, property, () => class ContainsManyEditorTemplate extends GlimmerComponent {
           <template>
             <ContainsManyEditor
               @model={{model}}
@@ -528,18 +544,18 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
               @setters={{setters}}
             />
           </template>
-        };
+        });
       } else if (isFieldContainsMany(model.constructor, property)) {
         let components = (Object.values(innerModel) as T[]).map(m => getComponent(field!, defaultFormat, m, set?.setters[property])) as any[];
-        return class ContainsMany extends GlimmerComponent {
+        return getCachedComponent(target, property, () => class ContainsMany extends GlimmerComponent {
           <template>
             {{#each components as |Item|}}
               <Item/>
             {{/each}}
           </template>
-        };
+        });
       }
-      return getComponent(field, defaultFormat, innerModel, set?.setters[property]);
+      return getCachedComponent(target, property, () => getComponent(field, defaultFormat, innerModel, set?.setters[property]));
     },
     getPrototypeOf() {
       // This is necessary for Ember to be able to locate the template associated
