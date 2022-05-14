@@ -2,7 +2,9 @@ import GlimmerComponent from '@glimmer/component';
 import { ComponentLike } from '@glint/template';
 import { NotReady, isNotReadyError} from './not-ready';
 import flatMap from 'lodash/flatMap';
+import get from 'lodash/get';
 import startCase from 'lodash/startCase';
+import { eq } from '../helpers/truth-helpers';
 import { TrackedWeakMap } from 'tracked-built-ins';
 import * as JSON from 'json-typescript';
 import { registerDestructor } from '@ember/destroyable';
@@ -354,14 +356,18 @@ function defaultFieldFormat(format: Format): Format {
   }
 }
 
-function getComponent<CardT extends Constructable>(card: CardT, format: Format, model: InstanceType<CardT>, set?: Setter): ComponentLike<{ Args: never, Blocks: never }> {
+function getComponent<CardT  extends Constructable>(card: CardT, format: Format, model: InstanceType<CardT>, set: Setter | undefined, modelPath: string[] = []): ComponentLike<{ Args: never, Blocks: never }> {
   let Implementation = (card as any)[format] ?? defaultComponent[format];
 
   // *inside* our own component, @fields is a proxy object that looks
   // up our fields on demand.
-  let internalFields = fieldsComponentsFor({}, model, defaultFieldFormat(format), set);
+  let internalFields = fieldsComponentsFor({}, model, defaultFieldFormat(format), set, modelPath);
+  
+  // we use a path to the original model instead of winnowing down the model in each recursive pass. This
+  // ensures that we never bind a scalar value as the model which would break live binding (i.e. reference vs value)
+  let path = modelPath.join('.');
   let component = <template>
-    <Implementation @model={{model}} @fields={{internalFields}} @set={{set}} />
+    <Implementation @model={{if (eq path '') model (get model path)}} @fields={{internalFields}} @set={{set}} />
   </template>
 
   // when viewed from *outside*, our component is both an invokable component
@@ -371,7 +377,7 @@ function getComponent<CardT extends Constructable>(card: CardT, format: Format, 
   // It would be possible to use `externalFields` in place of `internalFields` above,
   // avoiding the need for two separate Proxies. But that has the uncanny property of
   // making `<@fields />` be an infinite recursion.
-  let externalFields = fieldsComponentsFor(component, model, defaultFieldFormat(format), set);
+  let externalFields = fieldsComponentsFor(component, model, defaultFieldFormat(format), set, modelPath);
 
   // This cast is safe because we're returning a proxy that wraps component.
   return externalFields as unknown as typeof component;
@@ -499,7 +505,7 @@ function getFields<T extends Card>(card: T, onlyComputeds = false): { [P in keyo
   return fields;
 }
 
-function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFormat: Format, set?: Setter): FieldsTypeFor<T> {
+function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFormat: Format, set: Setter | undefined, modelPath: string[] = []): FieldsTypeFor<T> {
   function getCachedComponent(target: object, property: string, makeComponent: () => ComponentLike<{ Args: never, Blocks: never }>) {
     let component = componentCache.get(target)?.get(property);
     if (!component) {
@@ -520,33 +526,46 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
         // don't handle symbols or nulls
         return Reflect.get(target, property, received);
       }
-      let _field = getField(model.constructor, property);
+      let containingModel = modelPath.length === 0 ? model : get(model, modelPath.join('.'));
+      if (!containingModel) {
+        // don't handle nulls and undefineds
+        return Reflect.get(target, property, received);
+      }
+      let _field = getField(containingModel.constructor, property);
       if (!_field) {
         // field doesn't exist, fall back to normal property access behavior
         return Reflect.get(target, property, received);
       }
       let field = _field;
-      let innerModel = (model as any)[property];
-      defaultFormat = isFieldComputed(model.constructor, property) ? 'embedded' : defaultFormat;
+      let fieldPath = [...modelPath, property];
+      let innerModel = get(model, fieldPath.join('.'));
+      defaultFormat = isFieldComputed(containingModel.constructor, property) ? 'embedded' : defaultFormat;
 
-      if (isFieldContainsMany(model.constructor, property) && defaultFormat === 'edit') {
+      if (isFieldContainsMany(containingModel.constructor, property) && defaultFormat === 'edit') {
         if (isBaseCard in innerModel) {
           throw new Error('Cannot edit containsMany composite field');
         }
-        let setters = innerModel.map((_el: any, i: number) => makeSetter(model, property, i));
+        let setters = innerModel.map((_el: any, i: number) => makeSetter(model, [ property, String(i) ]));
         let fieldName = property; // to get around lint error
-        return getCachedComponent(target, property, () => class ContainsManyEditorTemplate extends GlimmerComponent {
+
+        // TODO the cached contains many editor component is not re-rendering when the cached
+        // containsMany field is mutated. Let's revisit this after the contains many component
+        // uses delegation for rendering its interior fields
+        return class ContainsManyEditorTemplate extends GlimmerComponent {
           <template>
             <ContainsManyEditor
-              @model={{model}}
+              @model={{containingModel}}
               @items={{innerModel}}
               @fieldName={{fieldName}}
               @setters={{setters}}
             />
           </template>
-        });
-      } else if (isFieldContainsMany(model.constructor, property)) {
-        let components = (Object.values(innerModel) as T[]).map(m => getComponent(field!, defaultFormat, m, set?.setters[property])) as any[];
+        };
+      } else if (isFieldContainsMany(containingModel.constructor, property)) {
+        let components = (Object.values(innerModel) as T[]).map((_, index) =>
+          getCachedComponent(target, `property_${index}`,
+            () => getComponent(field!, defaultFormat, model, set?.setters[property], [...fieldPath, String(index)])
+          )) as any[];
         return getCachedComponent(target, property, () => class ContainsMany extends GlimmerComponent {
           <template>
             {{#each components as |Item|}}
@@ -555,7 +574,8 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
           </template>
         });
       }
-      return getCachedComponent(target, property, () => getComponent(field, defaultFormat, innerModel, set?.setters[property]));
+      let component = getCachedComponent(target, property, () => getComponent(field, defaultFormat, model, set?.setters[property], [...fieldPath]));
+      return component;
     },
     getPrototypeOf() {
       // This is necessary for Ember to be able to locate the template associated
@@ -566,8 +586,9 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
     },
     ownKeys(target)  {
       let keys = Reflect.ownKeys(target);
-      for (let name in model) {
-        let field = getField(model.constructor, name);
+      let containingModel = modelPath.length === 0 ? model : get(model, modelPath.join('.'));
+      for (let name in containingModel) {
+        let field = getField(containingModel.constructor, name);
         if (field) {
           keys.push(name);
         }
@@ -579,7 +600,12 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
         // don't handle symbols
         return Reflect.getOwnPropertyDescriptor(target, property);
       }
-      let field = getField(model.constructor, property);
+      let containingModel = modelPath.length === 0 ? model : get(model, modelPath.join('.'));
+      if (!containingModel) {
+        // don't handle nulls and undefineds
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      }
+      let field = getField(containingModel.constructor, property);
       if (!field) {
         // field doesn't exist, fall back to normal property access behavior
         return Reflect.getOwnPropertyDescriptor(target, property);
@@ -595,27 +621,19 @@ function fieldsComponentsFor<T extends Card>(target: object, model: T, defaultFo
   }) as any;
 }
 
-function makeSetter(model: any, field?: string, index?: number): Setter {
+function makeSetter(model: any, modelPath: string[] = []): Setter {
   let s = (value: any) => {
-    if (!field) {
+    if (modelPath.length === 0) {
       throw new Error(`can't set topmost model`);
     }
-    if (index) {
-      model[field][index] = value;
-      model[field] = model[field];
-    } else {
-      model[field] = value;
-    }
+    set(model, modelPath, value);
   };
   (s as any).setters = new Proxy(
     {},
     {
       get: (target: any, prop: string, receiver: unknown) => {
         if (typeof prop === 'string') {
-          if (field && index) {
-            return makeSetter(model[field][index]);
-          }
-          return makeSetter(field ? model[field] : model, prop);
+          return makeSetter(model, [ ...modelPath, prop ])
         } else {
           return Reflect.get(target, prop, receiver);
         }
@@ -623,4 +641,38 @@ function makeSetter(model: any, field?: string, index?: number): Setter {
     }
   );
   return s as Setter;
+}
+
+
+// lodash set has some really unexpected behavior when dealing with our card instances.
+// i think it was really intended to only work for POJO's
+function set(object: any, path: string[], value: any) {
+  if (path.length == 0) {
+    throw new Error(`cannot perform set with empty path`);
+  }
+
+  let remainingPath = [...path];
+  let nestedObject = object;
+  let leafArrayProp: string | undefined;
+  while (remainingPath.length > 1) {
+    let prop = remainingPath.shift()!;
+    if (!(prop in nestedObject)) {
+      nestedObject[prop] = {};
+    }
+    let nextChild = nestedObject[prop];
+    if (Array.isArray(nextChild) && remainingPath.length === 1) {
+      leafArrayProp = prop;
+      break;
+    }
+    nestedObject = nextChild;
+  }
+
+  if (leafArrayProp) {
+    let array = nestedObject[leafArrayProp];
+    array[remainingPath.shift()!] = value;
+    // we do this to trigger our card setter
+    nestedObject[leafArrayProp] = [ ...array ];
+  } else {
+    nestedObject[remainingPath.shift()!] = value;
+  }
 }
