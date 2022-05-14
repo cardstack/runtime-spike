@@ -356,7 +356,7 @@ function defaultFieldFormat(format: Format): Format {
   }
 }
 
-function getComponent<CardT  extends Constructable>(card: CardT, format: Format, model: InstanceType<CardT>, set: Setter | undefined, modelPath: string[] = []): ComponentLike<{ Args: never, Blocks: never }> {
+function getComponent<CardT extends Constructable>(card: CardT, format: Format, model: InstanceType<CardT>, set: Setter | undefined, modelPath: string[] = []): ComponentLike<{ Args: never, Blocks: never }> {
   let Implementation = (card as any)[format] ?? defaultComponent[format];
 
   // *inside* our own component, @fields is a proxy object that looks
