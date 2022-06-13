@@ -41,10 +41,10 @@ export default class Go extends Component<Signature> {
                       contentChanged=this.contentChanged}}></div>
         <div class="preview">
           {{#if (isRunnable this.openFile.name)}}
-            <ImportModule @url={{localRealmURL this.openFile.path}}>
+            <ImportModule @url={{localRealmCardsURL this.openFile.path}}>
               <:ready as |module|>
                 <SchemaInspector
-                  @path={{localRealmURL this.openFile.path}}
+                  @sourceURL={{localRealmSourcesURL this.openFile.path}}
                   @module={{module}}
                   @src={{this.openFile.content}}
                   @inspector={{this.inspector}}
@@ -56,7 +56,7 @@ export default class Go extends Component<Signature> {
               </:error>
             </ImportModule>
           {{else if this.openFileCardJSON}}
-            <ImportModule @url={{relativeFrom this.openFileCardJSON.data.meta.adoptsFrom.module (localRealmURL this.openFile.path)}} >
+            <ImportModule @url={{relativeFrom this.openFileCardJSON.data.meta.adoptsFrom.module (localRealmCardsURL this.openFile.path)}} >
               <:ready as |module|>
                 <CardEditor
                   @module={{module}}
@@ -153,7 +153,12 @@ function isRunnable(filename: string): boolean {
   return ['.gjs', '.js', '.gts', '.ts'].some(extension => filename.endsWith(extension));
 }
 
-function localRealmURL(path: string): string {
+function localRealmCardsURL(path: string): string {
+  return `http://local-realm/cards/${path}`;
+}
+
+// TODO this should be /sources/* 
+function localRealmSourcesURL(path: string): string {
   return `http://local-realm/${path}`;
 }
 

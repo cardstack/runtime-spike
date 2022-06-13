@@ -52,7 +52,7 @@ export class FetchHandler {
         );
       }
       if (url.origin === 'http://local-realm') {
-        return await this.handleLocalRealm(request, url);
+        return await this.handleLocalRealm(url);
       }
       if (url.origin === 'http://externals') {
         return generateExternalStub(url.pathname.slice(1));
@@ -104,12 +104,18 @@ export class FetchHandler {
       the convention can be to use reexports to manage package versions (that are pinned)
   */
 
-  private async handleLocalRealm(
-    _request: Request,
-    url: URL
-  ): Promise<Response> {
+  private async handleLocalRealm(url: URL): Promise<Response> {
+    if (url.pathname.startsWith('/cards/')) {
+      return await this.handleCards(url.pathname.slice('/cards/'.length));
+    }
+    let handle = await this.getLocalFile(url.pathname.slice(1));
+    // TODO this will eventually be the /sources/ endpoint
+    return await this.serveLocalFile(handle);
+  }
+
+  private async handleCards(path: string): Promise<Response> {
     let handle = await this.getLocalFileWithFallbacks(
-      url.pathname.slice(1),
+      path,
       executableExtensions
     );
     if (

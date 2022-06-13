@@ -11,7 +11,7 @@
     },
     "meta": {
       "adoptsFrom": {
-        "module": "http://local-realm/post.gts",
+        "module": "http://local-realm/cards/post.gts",
         "name": "Post"
       }
     }

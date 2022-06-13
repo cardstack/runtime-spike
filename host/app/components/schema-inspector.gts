@@ -18,7 +18,7 @@ import type RouterService from '@ember/routing/router-service';
 
 interface Signature {
   Args: {
-    path: string;
+    sourceURL: string;
     module: Record<string, any>;
     src: string;
     inspector: CardInspector;
@@ -57,7 +57,7 @@ export default class SchemaInspector extends Component<Signature> {
                   '{{fieldCard.localName}}' card
                 {{/let}}
               {{else}}
-                {{#let (getCardPath cardRef this.args.path) as |path|}}
+                {{#let (getCardPath cardRef this.args.sourceURL) as |path|}}
                   {{#if path}}
                     <LinkTo @route="application" @query={{hash path=path}}>
                       {{externalCardName cardRef}}
@@ -92,7 +92,7 @@ export default class SchemaInspector extends Component<Signature> {
   @tracked showEditor = false;
   @tracked selectedIndex = 0;
   @service declare router: RouterService;
-  definitions = cardDefinitions(this, () => this.args.src, () => this.args.inspector, () => this.args.path);
+  definitions = cardDefinitions(this, () => this.args.src, () => this.args.inspector, () => makeCardsURL(this.args.sourceURL));
 
   get cards() {
     return this.definitions?.cards ?? [];
@@ -162,12 +162,15 @@ function externalCardName(ref: ExternalReference): string {
   return `'${ref.name}' card of ${ref.module}`;
 }
 
-function getCardPath(ref: ExternalReference, currentPath: string): string | undefined {
-  if (ref.module.startsWith('.') || ref.module.startsWith('/')) {
-    let pathSegments = currentPath.split('/');
-    pathSegments.pop();
+function makeCardsURL(href: string): string {
+  let url = new URL(href);
+  // TODO eventually this will have to change /sources/ to /cards/
+  return `${url.origin}/cards${url.pathname}`;
+}
 
-    let url = new URL(`${pathSegments.join()}/${ref.module}`, 'http://local-realm');
+function getCardPath(ref: ExternalReference, currentPath: string): string | undefined {
+  if ((ref.module.startsWith('.') || ref.module.startsWith('/')) && !ref.module.startsWith('//')) {
+    let url = new URL(ref.module, currentPath);
     return url.pathname.slice(1);
   }
   return undefined;
