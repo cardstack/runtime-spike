@@ -108,8 +108,12 @@ export class FetchHandler {
     if (url.pathname.startsWith('/cards/')) {
       return await this.handleCards(url.pathname.slice('/cards/'.length));
     }
+    if (url.pathname.startsWith('/sources/')) {
+      return await this.handleSources(url.pathname.slice('/sources/'.length));
+    }
+
+    // TODO remove this logic after we are happy with the /sources/ endpoint, return 404 instead
     let handle = await this.getLocalFile(url.pathname.slice(1));
-    // TODO this will eventually be the /sources/ endpoint
     return await this.serveLocalFile(handle);
   }
 
@@ -125,6 +129,26 @@ export class FetchHandler {
     } else {
       return await this.serveLocalFile(handle);
     }
+  }
+
+  private async handleSources(path: string): Promise<Response> {
+    // TODO serve directory listings when teh path ends in a "/".
+    // This is consumed by our file tree
+    let handle = await this.getLocalFileWithFallbacks(
+      path,
+      executableExtensions
+    );
+    let pathSegments = path.split('/');
+    let requestedName = pathSegments.pop()!;
+    if (handle.name !== requestedName) {
+      return new Response(null, {
+        status: 301,
+        headers: {
+          Location: ['', 'sources', ...pathSegments, handle.name].join('/'),
+        },
+      });
+    }
+    return await this.serveLocalFile(handle);
   }
 
   private async makeJS(handle: FileSystemFileHandle): Promise<Response> {

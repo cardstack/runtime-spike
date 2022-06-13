@@ -17,11 +17,10 @@ import {
   languageConfigs
 } from '../utils/editor-language';
 import { externalsMap } from '@cardstack/runtime-common';
-import type { FileResource } from '../resources/file';
 
 interface Signature {
   Args: {
-    openFile: FileResource | undefined;
+    source: string | undefined;
     path: string | undefined
   }
 }
