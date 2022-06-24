@@ -2,7 +2,7 @@ import { Realm, executableExtensions } from ".";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 
-type CardRef =
+export type CardRef =
   | {
       type: "exportedCard";
       module: string;
@@ -19,10 +19,13 @@ type CardRef =
     };
 
 // TODO
-type CardResource = unknown;
-type Query = unknown;
 
-interface CardDefinition {
+export type Saved = string;
+export type Unsaved = undefined;
+export type CardResource<IdRef = Saved> = unknown;
+export type Query = unknown;
+
+export interface CardDefinition {
   id: CardRef;
   super: CardRef | undefined; // base card has no super
   fields: Map<
