@@ -114,7 +114,7 @@ export function isCardDocument(doc: any): doc is CardDocument {
 
 type Query = unknown;
 
-interface CardDefinition {
+export interface CardDefinition {
   id: CardRef;
   key: string; // this is used to help for JSON-API serialization
   super: CardRef | undefined; // base card has no super

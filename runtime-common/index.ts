@@ -111,6 +111,7 @@ export { Realm, Kind } from "./realm";
 export {
   CardResource,
   CardDocument,
+  CardDefinition,
   isCardResource,
   isCardDocument,
 } from "./search-index";

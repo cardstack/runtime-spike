@@ -433,7 +433,7 @@ module('Unit | search-index', function () {
       module: '//cardstack.com/base/card-api',
       name: 'Card',
     });
-    assert.equal(definition?.fields.size, 0);
+    assert.strictEqual(definition?.fields.size, 0);
 
     let cardDefinition = await indexer.typeOf({
       type: 'exportedCard',
@@ -508,5 +508,30 @@ module('Unit | search-index', function () {
       undefined,
       'alsoNotAField field does not exist'
     );
+  });
+
+  test('parses first-class template syntax', async function (assert) {
+    let realm = new TestRealm({
+      'my-card.gts': `
+        import { contains, field, Card, Component } from '//cardstack.com/base/card-api';
+        import StringCard from '//cardstack.com/base/string';
+
+        export class Person extends Card {
+          @field firstName = contains(StringCard);
+
+          static isolated = class Isolated extends Component<typeof this> { 
+            <template><div class="hi"><@fields.firstName /></div></template>
+          }
+        }      
+      `,
+    });
+    let indexer = makeSearchIndex(realm);
+    await indexer.run();
+    let definition = await indexer.typeOf({
+      type: 'exportedCard',
+      module: 'my-card.gts',
+      name: 'Person',
+    });
+    assert.ok(definition, 'got definition');
   });
 });

@@ -5,15 +5,12 @@ import { action } from '@ember/object';
 import { eq, gt } from '../helpers/truth-helpers';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { CardInspector, FieldDefinition } from '../lib/schema-util';
 import get from 'lodash/get';
 import CardEditor, { NewCardArgs } from './card-editor';
-import { cardDefinitions } from '../resources/card-definitions';
 import { LinkTo } from '@ember/routing';
 //@ts-ignore glint seems to this that 'hash' is unused, even though we actually use it in the template below
 import { hash } from '@ember/helper';
-import type { FieldType } from '../lib/card-api';
-import type { ClassReference, ExternalReference } from '@cardstack/runtime-common/module-syntax';
+import type { CardDefinition } from '@cardstack/runtime-common';
 import type RouterService from '@ember/routing/router-service';
 
 interface Signature {
@@ -21,7 +18,6 @@ interface Signature {
     url: string;
     module: Record<string, any>;
     src: string;
-    inspector: CardInspector;
   }
 }
 
@@ -92,10 +88,10 @@ export default class SchemaInspector extends Component<Signature> {
   @tracked showEditor = false;
   @tracked selectedIndex = 0;
   @service declare router: RouterService;
-  definitions = cardDefinitions(this, () => this.args.src, () => this.args.inspector, () => this.args.url);
 
-  get cards() {
-    return this.definitions?.cards ?? [];
+  // TODO: this will be a fetch-based resource that calls the realm's _typeOf
+  get cards(): CardDefinition[] {
+    return [];
   }
 
   get cardArgs(): NewCardArgs {
@@ -141,18 +137,6 @@ export default class SchemaInspector extends Component<Signature> {
     this.showEditor = true;
   }
 
-}
-
-function fieldName([fieldName, ]: [fieldName: string, fieldDefinition: FieldDefinition]): string {
-  return fieldName;
-}
-
-function fieldType([_fieldName, fieldDefinition ]: [fieldName: string, fieldDefinition: FieldDefinition]): FieldType {
-  return fieldDefinition.type;
-}
-
-function fieldCard([_fieldName, fieldDefinition ]: [fieldName: string, fieldDefinition: FieldDefinition]): ClassReference {
-  return fieldDefinition.card;
 }
 
 function externalCardName(ref: ExternalReference): string {

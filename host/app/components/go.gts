@@ -9,7 +9,6 @@ import SchemaInspector from './schema-inspector';
 import CardEditor, { ExistingCardArgs } from './card-editor';
 import ImportModule from './import-module';
 import FileTree from './file-tree';
-import { CardInspector } from '../lib/schema-util';
 import { Format } from '../lib/card-api';
 import {
   getLangFromFileExtension,
@@ -47,7 +46,6 @@ export default class Go extends Component<Signature> {
                   @url={{localRealmURL this.openFile.path}}
                   @module={{module}}
                   @src={{this.openFile.content}}
-                  @inspector={{this.inspector}}
                 />
               </:ready>
               <:error as |error|>
@@ -80,17 +78,6 @@ export default class Go extends Component<Signature> {
 
   @service declare localRealm: LocalRealm;
   @tracked jsonError: string | undefined;
-  private inspector = new CardInspector({
-    async resolveModule(specifier: string, currentPath: string) {
-      if (externalsMap.has(specifier)) {
-        specifier = `http://externals/${specifier}`;
-      } else {
-        let url = new URL(specifier, currentPath);
-        specifier = url.href;
-      }
-      return await import(/* webpackIgnore: true */ specifier);
-    },
-  });
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
