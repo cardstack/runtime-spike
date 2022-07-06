@@ -107,11 +107,12 @@ export function isCardJSON(json: any): json is CardJSON {
   return typeof module === "string" && typeof name === "string";
 }
 
-export { Realm, Kind } from "./realm";
-export {
+export { Realm } from "./realm";
+export type { Kind } from "./realm";
+
+export type {
   CardResource,
   CardDocument,
   CardDefinition,
-  isCardResource,
-  isCardDocument,
 } from "./search-index";
+export { isCardResource, isCardDocument } from "./search-index";

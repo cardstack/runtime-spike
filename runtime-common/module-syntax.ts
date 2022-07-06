@@ -8,7 +8,7 @@ import {
   ExternalReference,
 } from "./schema-analysis-plugin";
 
-export { ClassReference, ExternalReference };
+export type { ClassReference, ExternalReference };
 
 import { parseTemplates } from "./vendor/ember-template-imports/parse-templates";
 
