@@ -5,7 +5,6 @@ import { service } from '@ember/service';
 //@ts-ignore cached not available yet in definitely typed
 import { tracked, cached } from '@glimmer/tracking';
 import LocalRealm from '../services/local-realm';
-import SchemaInspector from './schema-inspector';
 import CardEditor, { ExistingCardArgs } from './card-editor';
 import ImportModule from './import-module';
 import FileTree from './file-tree';
@@ -15,7 +14,7 @@ import {
   extendMonacoLanguage,
   languageConfigs
 } from '../utils/editor-language';
-import { externalsMap, isCardJSON } from '@cardstack/runtime-common';
+import { isCardJSON } from '@cardstack/runtime-common';
 import type { FileResource } from '../resources/file';
 
 interface Signature {
@@ -40,19 +39,7 @@ export default class Go extends Component<Signature> {
                       contentChanged=this.contentChanged}}></div>
         <div class="preview">
           {{#if (isRunnable this.openFile.name)}}
-            <ImportModule @url={{localRealmURL this.openFile.path}}>
-              <:ready as |module|>
-                <SchemaInspector
-                  @url={{localRealmURL this.openFile.path}}
-                  @module={{module}}
-                  @src={{this.openFile.content}}
-                />
-              </:ready>
-              <:error as |error|>
-                <h2>Encountered {{error.type}} error</h2>
-                <pre>{{error.message}}</pre>
-              </:error>
-            </ImportModule>
+            Schema inspector goes here
           {{else if this.openFileCardJSON}}
             <ImportModule @url={{relativeFrom this.openFileCardJSON.data.meta.adoptsFrom.module (localRealmURL this.openFile.path)}} >
               <:ready as |module|>
