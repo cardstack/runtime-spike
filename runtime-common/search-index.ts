@@ -1,10 +1,9 @@
 import {
-  Realm,
-  Kind,
   executableExtensions,
   baseOrigin,
   protocolRelativeBaseOrigin,
 } from ".";
+import { Realm, Kind } from "./realm";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 import ignore, { Ignore } from "ignore";

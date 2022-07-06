@@ -1,5 +1,5 @@
 import { WorkerError } from '@cardstack/runtime-common/error';
-import { generateExternalStub } from './externals';
+import { generateExternalStub } from '@cardstack/runtime-common/externals';
 import { baseOrigin, Realm } from '@cardstack/runtime-common';
 
 export class FetchHandler {

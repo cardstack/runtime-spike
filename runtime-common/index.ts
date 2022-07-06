@@ -108,7 +108,7 @@ export function isCardJSON(json: any): json is CardJSON {
 }
 
 export { Realm } from "./realm";
-export type { Kind } from "./realm";
+export type { Kind, RealmAdapter } from "./realm";
 
 export type {
   CardResource,
