@@ -67,7 +67,7 @@ export class Realm {
     this.#adapter = adapter;
     this.#searchIndex = new SearchIndex(
       this,
-      this.#adapter.readdir.bind(this),
+      this.#adapter.readdir.bind(this.#adapter),
       this.readFileAsText.bind(this)
     );
   }
