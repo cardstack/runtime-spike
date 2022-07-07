@@ -1,6 +1,6 @@
 // TODO After our refactors are over, this file should not exist anymore
 
-import { WorkerError } from '@cardstack/runtime-common/error';
+import { CardError } from '@cardstack/runtime-common/error';
 import { formatRFC7231 } from 'date-fns';
 import { Kind } from '@cardstack/runtime-common';
 
@@ -26,7 +26,7 @@ export async function getLocalFileWithFallbacks(
   try {
     return await getLocalFile(fs, path);
   } catch (err) {
-    if (!(err instanceof WorkerError) || err.response.status !== 404) {
+    if (!(err instanceof CardError) || err.response.status !== 404) {
       throw err;
     }
     for (let extension of extensions) {
@@ -34,7 +34,7 @@ export async function getLocalFileWithFallbacks(
         return await getLocalFile(fs, path + extension);
       } catch (innerErr) {
         if (
-          !(innerErr instanceof WorkerError) ||
+          !(innerErr instanceof CardError) ||
           innerErr.response.status !== 404
         ) {
           throw innerErr;
@@ -53,7 +53,7 @@ export async function getLocalFile(
     return await traverse(fs, path, 'file');
   } catch (err) {
     if ((err as DOMException).name === 'NotFoundError') {
-      throw WorkerError.withResponse(
+      throw CardError.withResponse(
         new Response(`${path} not found in local realm`, {
           status: 404,
           headers: { 'content-type': 'text/html' },
@@ -61,7 +61,7 @@ export async function getLocalFile(
       );
     }
     if ((err as DOMException).name === 'TypeMismatchError') {
-      throw WorkerError.withResponse(
+      throw CardError.withResponse(
         new Response(`${path} is a directory, but we expected a file`, {
           status: 404,
           headers: { 'content-type': 'text/html' },

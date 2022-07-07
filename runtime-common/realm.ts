@@ -11,13 +11,14 @@ import {
   notFound,
   methodNotAllowed,
   badRequest,
-  WorkerError,
+  CardError,
 } from "@cardstack/runtime-common/error";
 import { formatRFC7231 } from "date-fns";
 import {
   isCardJSON,
   ResourceObjectWithId,
   DirectoryEntryRelationship,
+  executableExtensions,
 } from "./index";
 import merge from "lodash/merge";
 import { parse, stringify } from "qs";
@@ -32,26 +33,21 @@ import decoratorsProposalPlugin from "@babel/plugin-proposal-decorators";
 import classPropertiesProposalPlugin from "@babel/plugin-proposal-class-properties";
 import typescriptPlugin from "@babel/plugin-transform-typescript";
 
+export interface FileRef {
+  path: string;
+  content: ReadableStream<Uint8Array> | Uint8Array | string;
+  lastModified: number;
+}
+
 export interface RealmAdapter {
   readdir(
     path: string,
     opts?: { create?: true }
   ): AsyncGenerator<{ name: string; path: string; kind: Kind }, void>;
 
-  openFile(
-    path: string
-  ): Promise<ReadableStream<Uint8Array> | Uint8Array | string>;
-
-  statFile(path: string): Promise<{ lastModified: number } | undefined>;
+  openFile(path: string): Promise<FileRef | undefined>;
 
   write(path: string, contents: string): Promise<{ lastModified: number }>;
-
-  // todo: get rid of this
-  todoHandle(
-    url: URL,
-    makeJS: (content: string, debugFilename: string) => Promise<Response>
-  ): Promise<Response>;
-  todo2(url: URL): Promise<Response>;
 }
 
 export class Realm {
@@ -109,7 +105,42 @@ export class Realm {
       return this.handleCardSource(request, url);
     }
 
-    return this.#adapter.todoHandle(url, this.makeJS.bind(this));
+    let localName = url.pathname.slice(1); // todo: pathnmae is wrong here
+    let maybeHandle = await this.getFileWithFallbacks(localName);
+
+    if (!maybeHandle) {
+      return notFound(request, `${localName} not found`);
+    }
+
+    let handle = maybeHandle;
+
+    if (
+      executableExtensions.some((extension) => handle.path.endsWith(extension))
+    ) {
+      return await this.makeJS(
+        await this.fileContentToText(handle),
+        handle.path
+      );
+    } else {
+      return await this.serveLocalFile(handle);
+    }
+  }
+
+  private async serveLocalFile(ref: FileRef): Promise<Response> {
+    return new Response(ref.content, {
+      headers: {
+        "Last-Modified": formatRFC7231(ref.lastModified),
+      },
+    });
+  }
+
+  private localName(url: URL): string {
+    if (!url.href.startsWith(this.url)) {
+      throw new Error(
+        `bug: realm ${this.url} cannot serve request for ${url.href}`
+      );
+    }
+    return url.href.slice(this.url.length);
   }
 
   private async handleCardSource(
@@ -128,7 +159,26 @@ export class Realm {
         },
       });
     }
-    return this.#adapter.todo2(url);
+
+    let localName = this.localName(url);
+
+    let handle = await this.getFileWithFallbacks(localName);
+
+    if (!handle) {
+      return notFound(request, `${localName} not found`);
+    }
+
+    let pathSegments = localName.split("/");
+    let requestedName = pathSegments.pop()!;
+    if (handle.path !== requestedName) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: [...pathSegments, handle.path].join("/"),
+        },
+      });
+    }
+    return await this.serveLocalFile(handle);
   }
 
   private async makeJS(
@@ -175,6 +225,27 @@ export class Realm {
         "content-type": "text/javascript",
       },
     });
+  }
+
+  // we bother with this because typescript is picky about allowing you to use
+  // explicit file extensions in your source code
+  private async getFileWithFallbacks(
+    path: string
+  ): Promise<FileRef | undefined> {
+    // TODO refactor to use search index
+
+    let result = await this.#adapter.openFile(path);
+    if (result) {
+      return result;
+    }
+
+    for (let extension of executableExtensions) {
+      result = await this.#adapter.openFile(path + extension);
+      if (result) {
+        return result;
+      }
+    }
+    return undefined;
   }
 
   private async handleJSONAPI(request: Request): Promise<Response> {
@@ -315,17 +386,25 @@ export class Realm {
     );
   }
 
-  protected async readFileAsText(path: string): Promise<string> {
-    let result = await this.#adapter.openFile(path);
-    if (typeof result === "string") {
-      return result;
+  // todo: I think we get rid of this
+  private async readFileAsText(path: string): Promise<string> {
+    let ref = await this.#adapter.openFile(path);
+    if (!ref) {
+      throw new Error("fixme todo");
+    }
+    return await this.fileContentToText(ref);
+  }
+
+  private async fileContentToText({ content }: FileRef): Promise<string> {
+    if (typeof content === "string") {
+      return content;
     }
     let decoder = new TextDecoder();
     let pieces: string[] = [];
-    if (result instanceof Uint8Array) {
-      pieces.push(decoder.decode(result));
+    if (content instanceof Uint8Array) {
+      pieces.push(decoder.decode(content));
     } else {
-      let reader = result.getReader();
+      let reader = content.getReader();
       while (true) {
         let { done, value } = await reader.read();
         if (done) {
@@ -536,7 +615,7 @@ export class Realm {
   private async addLastModifiedToCardDoc(card: CardDocument, path: string) {
     let { lastModified } = (await this.#adapter.statFile(path)) ?? {};
     if (!lastModified) {
-      throw new WorkerError(
+      throw new CardError(
         systemError(`no last modified date available for file ${path}`)
       );
     }

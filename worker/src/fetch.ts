@@ -1,4 +1,4 @@
-import { WorkerError } from '@cardstack/runtime-common/error';
+import { CardError } from '@cardstack/runtime-common/error';
 import { generateExternalStub } from '@cardstack/runtime-common/externals';
 import { baseOrigin, Realm } from '@cardstack/runtime-common';
 
@@ -45,7 +45,7 @@ export class FetchHandler {
       console.log(`Service worker passing through ${request.url}`);
       return await fetch(request);
     } catch (err) {
-      if (err instanceof WorkerError) {
+      if (err instanceof CardError) {
         return err.response;
       }
       console.error(err);

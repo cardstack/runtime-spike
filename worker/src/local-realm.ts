@@ -2,10 +2,11 @@ import {
   RealmAdapter,
   Kind,
   executableExtensions,
+  FileRef,
 } from '@cardstack/runtime-common';
+import { CardError } from '@cardstack/runtime-common/error';
 import { traverse } from './file-system';
-import { getLocalFileWithFallbacks, serveLocalFile } from './file-system';
-import { readFileAsText } from './util';
+import { getLocalFileWithFallbacks } from './file-system';
 
 export class LocalRealm implements RealmAdapter {
   constructor(private fs: FileSystemDirectoryHandle) {}
@@ -26,17 +27,28 @@ export class LocalRealm implements RealmAdapter {
     }
   }
 
-  async openFile(path: string): Promise<ReadableStream<Uint8Array>> {
-    let fileHandle = await traverse(this.fs, path, 'file');
-    let file = await fileHandle.getFile();
-    return file.stream() as unknown as ReadableStream<Uint8Array>;
-  }
-
-  async statFile(path: string): Promise<{ lastModified: number }> {
-    let fileHandle = await traverse(this.fs, path, 'file');
-    let file = await fileHandle.getFile();
-    let { lastModified } = file;
-    return { lastModified };
+  async openFile(path: string): Promise<FileRef | undefined> {
+    try {
+      let fileHandle = await traverse(this.fs, path, 'file');
+      let file = await fileHandle.getFile();
+      let lazyContent: ReadableStream<Uint8Array> | null = null;
+      return {
+        path,
+        get content() {
+          if (!lazyContent) {
+            lazyContent =
+              file.stream() as unknown as ReadableStream<Uint8Array>;
+          }
+          return lazyContent;
+        },
+        lastModified: file.lastModified,
+      };
+    } catch (err) {
+      if (!(err instanceof CardError) || err.response.status !== 404) {
+        throw err;
+      }
+      return undefined;
+    }
   }
 
   async write(
@@ -50,44 +62,6 @@ export class LocalRealm implements RealmAdapter {
     await stream.close();
     let { lastModified } = await handle.getFile();
     return { lastModified };
-  }
-
-  async todoHandle(
-    url: URL,
-    makeJS: (content: string, debugFilename: string) => Promise<Response>
-  ) {
-    let handle = await getLocalFileWithFallbacks(
-      this.fs,
-      url.pathname.slice(1),
-      executableExtensions
-    );
-    if (
-      executableExtensions.some((extension) => handle.name.endsWith(extension))
-    ) {
-      let content = await readFileAsText(handle);
-      return await makeJS(content, handle.name);
-    } else {
-      return await serveLocalFile(handle);
-    }
-  }
-
-  async todo2(url: URL) {
-    let handle = await getLocalFileWithFallbacks(
-      this.fs,
-      url.pathname.slice(1),
-      executableExtensions
-    );
-    let pathSegments = url.pathname.split('/');
-    let requestedName = pathSegments.pop()!;
-    if (handle.name !== requestedName) {
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: [...pathSegments, handle.name].join('/'),
-        },
-      });
-    }
-    return await serveLocalFile(handle);
   }
 }
 
