@@ -1,6 +1,6 @@
 import { executableExtensions, baseRealm } from ".";
 import { Kind } from "./realm";
-import { RealmPaths } from "./paths";
+import { RealmPaths, LocalPath } from "./paths";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 // import ignore, { Ignore } from "ignore";
@@ -195,7 +195,7 @@ export class SearchIndex {
     private readdir: (
       path: string
     ) => AsyncGenerator<{ name: string; path: string; kind: Kind }, void>,
-    private readFileAsText: (path: string) => Promise<string>
+    private readFileAsText: (path: LocalPath) => Promise<string>
   ) {}
 
   async run() {

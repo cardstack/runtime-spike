@@ -385,10 +385,7 @@ export class Realm {
   }
 
   // todo: I think we get rid of this
-  private async readFileAsText(path: string): Promise<string> {
-    if (path.startsWith("/")) {
-      path = path.slice(1);
-    }
+  private async readFileAsText(path: LocalPath): Promise<string> {
     let ref = await this.#adapter.openFile(path);
     if (!ref) {
       throw new Error("fixme todo");
