@@ -425,7 +425,10 @@ export class SearchIndex {
           inner.possibleCard
         );
       } else {
-        return await this.getExternalCardDefinition(ref.module, ref.name);
+        return await this.getExternalCardDefinition(
+          new URL(ref.module, url),
+          ref.name
+        );
       }
     }
   }
@@ -461,13 +464,11 @@ export class SearchIndex {
   }
 
   private async getExternalCardDefinition(
-    href: string,
+    moduleURL: URL,
     exportName: string
   ): Promise<CardDefinition | undefined> {
     // TODO This is scaffolding for the base realm, implement for real once we
     // have this realm endpoint fleshed out
-    let module = href.startsWith("http:") ? href : `http:${href}`;
-    let moduleURL = new URL(module);
     if (!baseRealm.inRealm(moduleURL)) {
       return Promise.resolve(undefined);
     }
@@ -478,7 +479,7 @@ export class SearchIndex {
           ? {
               id: {
                 type: "exportedCard",
-                module: href,
+                module: moduleURL.href,
                 name: exportName,
               },
               key: `${baseRealm.fileURL(path)}/Card`,
@@ -494,7 +495,7 @@ export class SearchIndex {
           ? {
               id: {
                 type: "exportedCard",
-                module: href,
+                module: moduleURL.href,
                 name: exportName,
               },
               super: {
@@ -511,7 +512,7 @@ export class SearchIndex {
           ? Promise.resolve({
               id: {
                 type: "exportedCard",
-                module: href,
+                module: moduleURL.href,
                 name: exportName,
               },
               super: {
@@ -525,7 +526,7 @@ export class SearchIndex {
           : undefined;
     }
     throw new Error(
-      `unimplemented: don't know how to look up card types for ${href}`
+      `unimplemented: don't know how to look up card types for ${moduleURL.href}`
     );
   }
 
