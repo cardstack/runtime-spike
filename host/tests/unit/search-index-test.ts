@@ -1,18 +1,9 @@
 import { module, test } from 'qunit';
-import { SearchIndex } from '@cardstack/runtime-common/search-index';
-import { TestRealm } from '../helpers';
-
-function makeSearchIndex(realm: TestRealm) {
-  return new SearchIndex(
-    realm,
-    realm.readdir.bind(realm),
-    realm.readFileAsText.bind(realm)
-  );
-}
+import { createTestRealm } from '../helpers';
 
 module('Unit | search-index', function () {
   test('full indexing discovers card instances', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'empty.json': {
         data: {
           type: 'card',
@@ -26,7 +17,7 @@ module('Unit | search-index', function () {
         },
       },
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let cards = await indexer.search({});
     assert.deepEqual(cards, [
@@ -45,7 +36,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing identifies the exported cards in a module', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -60,7 +51,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let refs = await indexer.exportedCardsOf('person.gts');
     assert.deepEqual(refs, [
@@ -73,7 +64,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing discovers card source where super class card comes from outside local realm', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -84,7 +75,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
 
     let definition = await indexer.typeOf({
@@ -121,7 +112,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing discovers card source where super class card comes from different module in the local realm', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -141,7 +132,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'exportedCard',
@@ -179,7 +170,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing discovers card source where super class card comes same module', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -194,7 +185,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'exportedCard',
@@ -230,7 +221,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing discovers internal cards that are consumed by an exported card', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -245,7 +236,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'ancestorOf',
@@ -284,7 +275,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing ignores card source where super class in a different module is not actually a card', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -306,7 +297,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     assert.strictEqual(
       await indexer.typeOf({
@@ -320,7 +311,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing ignores card source where the super class is in the same module and not actually a card', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -332,7 +323,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     assert.strictEqual(
       await indexer.typeOf({
@@ -346,7 +337,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing ignores cards that are not exported from their module', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -357,7 +348,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     assert.strictEqual(
       await indexer.typeOf({
@@ -371,7 +362,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing ignores card source where super class is in a different realm, but the realm says that the export is not actually a card', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, NotACard } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -381,7 +372,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     assert.strictEqual(
       await indexer.typeOf({
@@ -395,7 +386,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing discovers internal field cards that are consumed by an exported card', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -408,7 +399,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'fieldOf',
@@ -463,7 +454,7 @@ module('Unit | search-index', function () {
   });
 
   test('full indexing ignores fields that are not actually fields', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'person.gts': `
         import { contains, field, Card, notAFieldDecorator, notAFieldType } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -478,7 +469,7 @@ module('Unit | search-index', function () {
         }
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'exportedCard',
@@ -511,7 +502,7 @@ module('Unit | search-index', function () {
   });
 
   test('parses first-class template syntax', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'my-card.gts': `
         import { contains, field, Card, Component } from 'https://cardstack.com/base/card-api';
         import StringCard from 'https://cardstack.com/base/string';
@@ -525,7 +516,7 @@ module('Unit | search-index', function () {
         }      
       `,
     });
-    let indexer = makeSearchIndex(realm);
+    let indexer = realm.searchIndex;
     await indexer.run();
     let definition = await indexer.typeOf({
       type: 'exportedCard',

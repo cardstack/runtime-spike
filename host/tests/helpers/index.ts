@@ -1,5 +1,5 @@
 import { parse } from 'date-fns';
-import { Realm, Kind } from '@cardstack/runtime-common';
+import { Realm, Kind, RealmAdapter, FileRef } from '@cardstack/runtime-common';
 
 export function cleanWhiteSpace(text: string) {
   return text.replace(/\s+/g, ' ').trim();
@@ -13,12 +13,15 @@ export interface Dir {
   [name: string]: string | Dir;
 }
 
-export class TestRealm extends Realm {
+export function createTestRealm(flatFiles: Record<string, string | object>) {
+  return new Realm('http://test-realm/', new TestRealm(flatFiles));
+}
+
+export class TestRealm implements RealmAdapter {
   #files: Dir = {};
   #lastModified: Map<string, number> = new Map();
 
   constructor(flatFiles: Record<string, string | object>) {
-    super('http://test-realm/');
     let now = Date.now();
     for (let [path, content] of Object.entries(flatFiles)) {
       let segments = path.split('/');
@@ -27,7 +30,7 @@ export class TestRealm extends Realm {
       if (typeof dir === 'string') {
         throw new Error(`tried to use file as directory`);
       }
-      this.#lastModified.set(new URL(path, this.url).pathname, now);
+      this.#lastModified.set(new URL(path, 'http://test-realm/').pathname, now);
       if (typeof content === 'string') {
         dir[last] = content;
       } else {
@@ -79,9 +82,9 @@ export class TestRealm extends Realm {
     }
   }
 
-  async readFileAsText(path: string): Promise<string> {
-    return super.readFileAsText(path);
-  }
+  // async readFileAsText(path: string): Promise<string> {
+  //   return super.readFileAsText(path);
+  // }
 
   get files() {
     return this.#files;
@@ -91,44 +94,38 @@ export class TestRealm extends Realm {
     return this.#lastModified;
   }
 
-  getSearchIndex() {
-    return this.searchIndex;
-  }
+  // getSearchIndex() {
+  //   return this.searchIndex;
+  // }
 
-  async handle(request: Request): Promise<Response> {
-    if (request.headers.get('Accept')?.includes('application/vnd.api+json')) {
-      return await this.handleJSONAPI(request);
-    } else if (
-      request.headers.get('Accept')?.includes('application/vnd.card+source')
-    ) {
-      throw new Error(
-        `TestRealm does not implement application/vnd.card+source requests: ${request.method} ${request.url}`
-      );
-    }
-    throw new Error(
-      `TestRealm does not implement request ${request.method} ${request.url}`
-    );
-  }
+  // async handle(request: Request): Promise<Response> {
+  //   if (request.headers.get('Accept')?.includes('application/vnd.api+json')) {
+  //     return await this.handleJSONAPI(request);
+  //   } else if (
+  //     request.headers.get('Accept')?.includes('application/vnd.card+source')
+  //   ) {
+  //     throw new Error(
+  //       `TestRealm does not implement application/vnd.card+source requests: ${request.method} ${request.url}`
+  //     );
+  //   }
+  //   throw new Error(
+  //     `TestRealm does not implement request ${request.method} ${request.url}`
+  //   );
+  // }
 
-  async openFile(path: string): Promise<string> {
+  async openFile(path: string): Promise<FileRef | undefined> {
     let contents = this.#traverse(path.replace(/^\//, '').split('/'), 'file');
     if (typeof contents !== 'string') {
       throw new Error('treated directory as a file');
     }
-    return contents;
+    return {
+      path,
+      content: contents,
+      lastModified: this.#lastModified.get(path)!,
+    };
   }
 
-  protected async statFile(
-    path: string
-  ): Promise<{ lastModified: number } | undefined> {
-    let lastModified = this.#lastModified.get(path);
-    if (lastModified === undefined) {
-      return undefined;
-    }
-    return { lastModified };
-  }
-
-  protected async doWrite(
+  async write(
     path: string,
     contents: string | object
   ): Promise<{ lastModified: number }> {
@@ -148,7 +145,10 @@ export class TestRealm extends Realm {
         ? contents
         : JSON.stringify(contents, null, 2);
     let lastModified = Date.now();
-    this.#lastModified.set(new URL(path, this.url).pathname, lastModified);
+    this.#lastModified.set(
+      new URL(path, 'http://test-realm/').pathname,
+      lastModified
+    );
     return { lastModified };
   }
 }

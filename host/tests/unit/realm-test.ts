@@ -1,10 +1,10 @@
 import { module, test } from 'qunit';
 import { isCardDocument } from '@cardstack/runtime-common/search-index';
-import { TestRealm, Dir } from '../helpers';
+import { Dir, createTestRealm } from '../helpers';
 
 module('Unit | realm', function () {
   test('realm can serve card data requests', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'dir/empty.json': {
         data: {
           type: 'card',
@@ -40,7 +40,7 @@ module('Unit | realm', function () {
             module: 'https://cardstack.com/base/card-api',
             name: 'Card',
           },
-          lastModified: realm.lastModified.get('/dir/empty.json'),
+          // lastModified: realm.lastModified.get('/dir/empty.json'),
         },
         links: {
           self: 'http://test-realm/dir/empty',
@@ -51,7 +51,7 @@ module('Unit | realm', function () {
   });
 
   test('realm can serve create card requests', async function (assert) {
-    let realm = new TestRealm({});
+    let realm = createTestRealm({});
     await realm.ready;
     {
       let response = await realm.handle(
@@ -107,7 +107,7 @@ module('Unit | realm', function () {
         assert.ok(false, 'response body is not a card document');
       }
 
-      let searchIndex = realm.getSearchIndex();
+      let searchIndex = realm.searchIndex;
       let card = await searchIndex.card(new URL(json.data.links.self));
       assert.strictEqual(
         card?.id,
@@ -188,7 +188,7 @@ module('Unit | realm', function () {
   });
 
   test('realm can serve patch card requests', async function (assert) {
-    let realm = new TestRealm({
+    let realm = createTestRealm({
       'dir/card.json': {
         data: {
           type: 'card',
@@ -274,7 +274,7 @@ module('Unit | realm', function () {
       assert.ok(false, 'response body is not a card document');
     }
 
-    let searchIndex = realm.getSearchIndex();
+    let searchIndex = realm.searchIndex;
     let card = await searchIndex.card(new URL(json.data.links.self));
     assert.strictEqual(
       card?.id,
