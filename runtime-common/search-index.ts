@@ -1,5 +1,5 @@
 import { executableExtensions, baseRealm } from ".";
-import { Kind } from "./realm";
+import { Kind, Realm } from "./realm";
 import { RealmPaths, LocalPath } from "./paths";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
@@ -191,7 +191,8 @@ export class SearchIndex {
   // private ignoreMap = new URLMap<Ignore>();
 
   constructor(
-    private realm: RealmPaths,
+    private realm: Realm,
+    private realmPaths: RealmPaths,
     private readdir: (
       path: string
     ) => AsyncGenerator<{ name: string; path: string; kind: Kind }, void>,
@@ -224,7 +225,7 @@ export class SearchIndex {
       directories.set(url, entries);
     }
     for await (let { path: innerPath, kind } of this.readdir(
-      this.realm.local(url)
+      this.realmPaths.local(url)
     )) {
       let innerURL = new URL(innerPath, this.realm.url);
       // if (this.isIgnored(innerURL)) {
@@ -274,7 +275,9 @@ export class SearchIndex {
 
   private async visitFile(url: URL) {
     if (url.href.endsWith(".json")) {
-      let json = JSON.parse(await this.readFileAsText(this.realm.local(url)));
+      let json = JSON.parse(
+        await this.readFileAsText(this.realmPaths.local(url))
+      );
       if (isCardDocument(json)) {
         let instanceURL = new URL(url.href.replace(/\.json$/, ""));
         json.data.id = instanceURL.href;
@@ -282,7 +285,7 @@ export class SearchIndex {
       }
     } else if (hasExecutableExtension(url.href)) {
       let mod = new ModuleSyntax(
-        await this.readFileAsText(this.realm.local(url))
+        await this.readFileAsText(this.realmPaths.local(url))
       );
       this.modules.set(url, mod);
       this.modules.set(trimExecutableExtension(url), mod);
