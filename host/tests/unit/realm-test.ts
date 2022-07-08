@@ -1,6 +1,5 @@
 import { module, test } from 'qunit';
 import { isCardDocument } from '@cardstack/runtime-common/search-index';
-import { Realm } from '@cardstack/runtime-common';
 import { TestRealm, TestRealmAdapter } from '../helpers';
 
 module('Unit | realm', function () {
