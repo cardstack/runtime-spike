@@ -507,7 +507,7 @@ export class SearchIndex {
               fields: new Map(),
             }
           : undefined;
-      case "/base/text-area":
+      case "text-area":
         return exportName === "default"
           ? Promise.resolve({
               id: {
