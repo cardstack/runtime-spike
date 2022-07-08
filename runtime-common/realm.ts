@@ -172,7 +172,7 @@ export class Realm {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: handle.path,
+          Location: `/${handle.path}`,
         },
       });
     }
