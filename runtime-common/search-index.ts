@@ -296,16 +296,16 @@ export class SearchIndex {
     directories?: URLMap<{ name: string; kind: Kind }[]>
   ): Promise<void> {
     let newDefinitions: Map<string, CardDefinition> = new Map();
-    for (let [path, mod] of this.modules) {
+    for (let [url, mod] of this.modules) {
       for (let possibleCard of mod.possibleCards) {
         if (possibleCard.exportedAs) {
           await this.buildDefinition(
             newDefinitions,
-            path,
+            url,
             mod,
             {
               type: "exportedCard",
-              module: path.href,
+              module: url.href,
               name: possibleCard.exportedAs,
             },
             possibleCard
