@@ -1,10 +1,11 @@
 import { module, test } from 'qunit';
 import { isCardDocument } from '@cardstack/runtime-common/search-index';
-import { Dir, createTestRealm } from '../helpers';
+import { Realm } from '@cardstack/runtime-common';
+import { TestRealm, TestRealmAdapter } from '../helpers';
 
 module('Unit | realm', function () {
   test('realm can serve card data requests', async function (assert) {
-    let realm = createTestRealm({
+    let adapter = new TestRealmAdapter({
       'dir/empty.json': {
         data: {
           type: 'card',
@@ -18,6 +19,7 @@ module('Unit | realm', function () {
         },
       },
     });
+    let realm = TestRealm.createWithAdapter(adapter);
     await realm.ready;
 
     let response = await realm.handle(
@@ -40,7 +42,7 @@ module('Unit | realm', function () {
             module: 'https://cardstack.com/base/card-api',
             name: 'Card',
           },
-          // lastModified: realm.lastModified.get('/dir/empty.json'),
+          lastModified: adapter.lastModified.get('dir/empty.json'),
         },
         links: {
           self: 'http://test-realm/dir/empty',
@@ -51,7 +53,8 @@ module('Unit | realm', function () {
   });
 
   test('realm can serve create card requests', async function (assert) {
-    let realm = createTestRealm({});
+    let adapter = new TestRealmAdapter({});
+    let realm = TestRealm.createWithAdapter(adapter);
     await realm.ready;
     {
       let response = await realm.handle(
@@ -87,8 +90,12 @@ module('Unit | realm', function () {
           'the id is correct'
         );
         assert.ok(json.data.meta.lastModified, 'lastModified is populated');
+        let fileRef = await adapter.openFile('Card/1.json');
+        if (!fileRef) {
+          throw new Error('file not found');
+        }
         assert.deepEqual(
-          JSON.parse((realm.files?.Card as Dir)?.['1.json'] as string),
+          JSON.parse(fileRef.content as string),
           {
             data: {
               type: 'card',
@@ -159,14 +166,14 @@ module('Unit | realm', function () {
           'the id is correct'
         );
         assert.ok(
-          (realm.files?.Card as Dir)?.['2.json'],
+          (await adapter.openFile('Card/2.json'))?.content,
           'file contents exist'
         );
       } else {
         assert.ok(false, 'response body is not a card document');
       }
 
-      let searchIndex = realm.getSearchIndex();
+      let searchIndex = realm.searchIndex;
       let card = await searchIndex.card(new URL(json.data.links.self));
       assert.strictEqual(
         card?.id,
@@ -188,7 +195,7 @@ module('Unit | realm', function () {
   });
 
   test('realm can serve patch card requests', async function (assert) {
-    let realm = createTestRealm({
+    let adapter = new TestRealmAdapter({
       'dir/card.json': {
         data: {
           type: 'card',
@@ -205,6 +212,7 @@ module('Unit | realm', function () {
         },
       },
     });
+    let realm = TestRealm.createWithAdapter(adapter);
     await realm.ready;
     let response = await realm.handle(
       new Request('http://test-realm/dir/card', {
@@ -251,8 +259,12 @@ module('Unit | realm', function () {
         'field value is correct'
       );
       assert.ok(json.data.meta.lastModified, 'lastModified is populated');
+      let fileRef = await adapter.openFile('dir/card.json');
+      if (!fileRef) {
+        throw new Error('file not found');
+      }
       assert.deepEqual(
-        JSON.parse((realm.files?.dir as Dir)?.['card.json'] as string),
+        JSON.parse(fileRef.content as string),
         {
           data: {
             type: 'card',

@@ -13,11 +13,16 @@ export interface Dir {
   [name: string]: string | Dir;
 }
 
-export function createTestRealm(flatFiles: Record<string, string | object>) {
-  return new Realm('http://test-realm/', new TestRealm(flatFiles));
-}
+export const TestRealm = {
+  create(flatFiles: Record<string, string | object>): Realm {
+    return new Realm('http://test-realm/', new TestRealmAdapter(flatFiles));
+  },
+  createWithAdapter(adapter: RealmAdapter): Realm {
+    return new Realm('http://test-realm/', adapter);
+  },
+};
 
-export class TestRealm implements RealmAdapter {
+export class TestRealmAdapter implements RealmAdapter {
   #files: Dir = {};
   #lastModified: Map<string, number> = new Map();
 
@@ -30,7 +35,11 @@ export class TestRealm implements RealmAdapter {
       if (typeof dir === 'string') {
         throw new Error(`tried to use file as directory`);
       }
-      this.#lastModified.set(new URL(path, 'http://test-realm/').pathname, now);
+      // TODO: fix path manipulation and how lastModified is set
+      this.#lastModified.set(
+        new URL(path, 'http://test-realm/').pathname.slice(1),
+        now
+      );
       if (typeof content === 'string') {
         dir[last] = content;
       } else {
@@ -39,33 +48,8 @@ export class TestRealm implements RealmAdapter {
     }
   }
 
-  #traverse(
-    segments: string[],
-    targetKind: Kind,
-    originalPath = segments.join('/')
-  ): string | Dir {
-    let dir: Dir | string = this.#files;
-    segments = segments.filter(Boolean); // this emulates our actual traverse's trimming or leading and traililng /'s
-    while (segments.length > 0) {
-      if (typeof dir === 'string') {
-        throw new Error(`tried to use file as directory`);
-      }
-      let name = segments.shift()!;
-      if (!dir[name]) {
-        if (
-          segments.length > 0 ||
-          (segments.length === 0 && targetKind === 'directory')
-        ) {
-          dir[name] = {};
-        } else if (segments.length === 0 && targetKind === 'file') {
-          let err = new Error(`${originalPath} not found`);
-          err.name = 'NotFoundError'; // duck type to the same as what the FileSystem API looks like
-          throw err;
-        }
-      }
-      dir = dir[name];
-    }
-    return dir;
+  get lastModified() {
+    return this.#lastModified;
   }
 
   async *readdir(
@@ -82,45 +66,22 @@ export class TestRealm implements RealmAdapter {
     }
   }
 
-  // async readFileAsText(path: string): Promise<string> {
-  //   return super.readFileAsText(path);
-  // }
-
-  get files() {
-    return this.#files;
-  }
-
-  get lastModified() {
-    return this.#lastModified;
-  }
-
-  // getSearchIndex() {
-  //   return this.searchIndex;
-  // }
-
-  // async handle(request: Request): Promise<Response> {
-  //   if (request.headers.get('Accept')?.includes('application/vnd.api+json')) {
-  //     return await this.handleJSONAPI(request);
-  //   } else if (
-  //     request.headers.get('Accept')?.includes('application/vnd.card+source')
-  //   ) {
-  //     throw new Error(
-  //       `TestRealm does not implement application/vnd.card+source requests: ${request.method} ${request.url}`
-  //     );
-  //   }
-  //   throw new Error(
-  //     `TestRealm does not implement request ${request.method} ${request.url}`
-  //   );
-  // }
-
   async openFile(path: string): Promise<FileRef | undefined> {
-    let contents = this.#traverse(path.replace(/^\//, '').split('/'), 'file');
-    if (typeof contents !== 'string') {
+    let content;
+    try {
+      content = this.#traverse(path.replace(/^\//, '').split('/'), 'file');
+    } catch (err: any) {
+      if (['TypeMismatchError', 'NotFoundError'].includes(err.name)) {
+        return undefined;
+      }
+      throw err;
+    }
+    if (typeof content !== 'string') {
       throw new Error('treated directory as a file');
     }
     return {
       path,
-      content: contents,
+      content,
       lastModified: this.#lastModified.get(path)!,
     };
   }
@@ -150,5 +111,34 @@ export class TestRealm implements RealmAdapter {
       lastModified
     );
     return { lastModified };
+  }
+
+  #traverse(
+    segments: string[],
+    targetKind: Kind,
+    originalPath = segments.join('/')
+  ): string | Dir {
+    let dir: Dir | string = this.#files;
+    segments = segments.filter(Boolean); // this emulates our actual traverse's trimming or leading and traililng /'s
+    while (segments.length > 0) {
+      if (typeof dir === 'string') {
+        throw new Error(`tried to use file as directory`);
+      }
+      let name = segments.shift()!;
+      if (!dir[name]) {
+        if (
+          segments.length > 0 ||
+          (segments.length === 0 && targetKind === 'directory')
+        ) {
+          dir[name] = {};
+        } else if (segments.length === 0 && targetKind === 'file') {
+          let err = new Error(`${originalPath} not found`);
+          err.name = 'NotFoundError'; // duck type to the same as what the FileSystem API looks like
+          throw err;
+        }
+      }
+      dir = dir[name];
+    }
+    return dir;
   }
 }
