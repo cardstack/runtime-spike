@@ -1,8 +1,4 @@
-import {
-  executableExtensions,
-  baseOrigin,
-  protocolRelativeBaseOrigin,
-} from ".";
+import { executableExtensions, baseRealm } from ".";
 import { Realm, Kind } from "./realm";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
@@ -467,7 +463,7 @@ export class SearchIndex {
     return { mod, possibleCard };
   }
 
-  private getExternalCardDefinition(
+  private async getExternalCardDefinition(
     href: string,
     exportName: string
   ): Promise<CardDefinition | undefined> {
@@ -475,30 +471,30 @@ export class SearchIndex {
     // have this realm endpoint fleshed out
     let module = href.startsWith("http:") ? href : `http:${href}`;
     let moduleURL = new URL(module);
-    if (moduleURL.origin !== baseOrigin) {
+    if (!baseRealm.inRealm(moduleURL)) {
       return Promise.resolve(undefined);
     }
-    let path = moduleURL.pathname;
+    let path = baseRealm.local(moduleURL);
     switch (path) {
-      case "/base/card-api":
+      case "card-api":
         return exportName === "Card"
-          ? Promise.resolve({
+          ? {
               id: {
                 type: "exportedCard",
                 module: href,
                 name: exportName,
               },
-              key: `${baseOrigin}${path}/Card`,
+              key: `${baseRealm.fileURL(path)}/Card`,
               super: undefined,
               fields: new Map(),
-            })
-          : Promise.resolve(undefined);
-      case "/base/string":
-      case "/base/integer":
-      case "/base/date":
-      case "/base/datetime":
+            }
+          : undefined;
+      case "string":
+      case "integer":
+      case "date":
+      case "datetime":
         return exportName === "default"
-          ? Promise.resolve({
+          ? {
               id: {
                 type: "exportedCard",
                 module: href,
@@ -506,13 +502,13 @@ export class SearchIndex {
               },
               super: {
                 type: "exportedCard",
-                module: `${baseOrigin}/base/card-api`,
+                module: baseRealm.fileURL("card-api").href,
                 name: "Card",
               },
-              key: `${baseOrigin}${path}/default`,
+              key: `${baseRealm.fileURL(path)}/default`,
               fields: new Map(),
-            })
-          : Promise.resolve(undefined);
+            }
+          : undefined;
       case "/base/text-area":
         return exportName === "default"
           ? Promise.resolve({
@@ -523,13 +519,13 @@ export class SearchIndex {
               },
               super: {
                 type: "exportedCard",
-                module: `${baseOrigin}/base/string`,
+                module: baseRealm.fileURL("string").href,
                 name: "default",
               },
-              key: `${baseOrigin}${path}/default`,
+              key: `${baseRealm.fileURL(path)}/default`,
               fields: new Map(),
             })
-          : Promise.resolve(undefined);
+          : undefined;
     }
     throw new Error(
       `unimplemented: don't know how to look up card types for ${href}`
@@ -611,8 +607,7 @@ export class SearchIndex {
 function isOurFieldDecorator(ref: ClassReference, inModule: URL): boolean {
   return (
     ref.type === "external" &&
-    new URL(ref.module, inModule).href ===
-      new URL(`${protocolRelativeBaseOrigin}/base/card-api`, inModule).href &&
+    new URL(ref.module, inModule).href === baseRealm.fileURL("card-api").href &&
     ref.name === "field"
   );
 }
@@ -623,8 +618,7 @@ function getFieldType(
 ): "contains" | "containsMany" | undefined {
   if (
     ref.type === "external" &&
-    new URL(ref.module, inModule).href ===
-      new URL(`${protocolRelativeBaseOrigin}/base/card-api`, inModule).href &&
+    new URL(ref.module, inModule).href === baseRealm.fileURL("card-api").href &&
     ["contains", "containsMany"].includes(ref.name)
   ) {
     return ref.name as ReturnType<typeof getFieldType>;

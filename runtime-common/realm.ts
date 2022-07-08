@@ -6,6 +6,7 @@ import {
   CardDocument,
   isCardDocument,
 } from "./search-index";
+import { RealmPaths, LocalPath } from "./paths";
 import {
   systemError,
   notFound,
@@ -34,18 +35,18 @@ import classPropertiesProposalPlugin from "@babel/plugin-proposal-class-properti
 import typescriptPlugin from "@babel/plugin-transform-typescript";
 
 export interface FileRef {
-  path: string;
+  path: LocalPath;
   content: ReadableStream<Uint8Array> | Uint8Array | string;
   lastModified: number;
 }
 
 export interface RealmAdapter {
   readdir(
-    path: string,
+    path: LocalPath,
     opts?: { create?: true }
-  ): AsyncGenerator<{ name: string; path: string; kind: Kind }, void>;
+  ): AsyncGenerator<{ name: string; path: LocalPath; kind: Kind }, void>;
 
-  openFile(path: string): Promise<FileRef | undefined>;
+  openFile(path: LocalPath): Promise<FileRef | undefined>;
 
   write(path: string, contents: string): Promise<{ lastModified: number }>;
 }
@@ -54,11 +55,14 @@ export class Realm {
   #startedUp = new Deferred<void>();
   #searchIndex: SearchIndex;
   #adapter: RealmAdapter;
+  #paths: RealmPaths;
 
-  readonly url: string;
+  get url(): string {
+    return this.#paths.realm;
+  }
 
   constructor(url: string, adapter: RealmAdapter) {
-    this.url = url.replace(/\/$/, "") + "/";
+    this.#paths = new RealmPaths(url);
     this.#startedUp.fulfill((() => this.#startup())());
     this.#adapter = adapter;
     this.#searchIndex = new SearchIndex(
@@ -69,7 +73,7 @@ export class Realm {
   }
 
   async write(
-    path: string,
+    path: LocalPath,
     contents: string
   ): Promise<{ lastModified: number }> {
     let results = await this.#adapter.write(path, contents);
@@ -105,11 +109,10 @@ export class Realm {
       return this.handleCardSource(request, url);
     }
 
-    let localName = url.pathname.slice(1); // todo: pathnmae is wrong here
-    let maybeHandle = await this.getFileWithFallbacks(localName);
+    let maybeHandle = await this.getFileWithFallbacks(this.#paths.local(url));
 
     if (!maybeHandle) {
-      return notFound(request, `${localName} not found`);
+      return notFound(request, `${request.url} not found`);
     }
 
     let handle = maybeHandle;
@@ -134,22 +137,13 @@ export class Realm {
     });
   }
 
-  private localName(url: URL): string {
-    if (!url.href.startsWith(this.url)) {
-      throw new Error(
-        `bug: realm ${this.url} cannot serve request for ${url.href}`
-      );
-    }
-    return url.href.slice(this.url.length);
-  }
-
   private async handleCardSource(
     request: Request,
     url: URL
   ): Promise<Response> {
     if (request.method === "POST") {
       let { lastModified } = await this.write(
-        new URL(request.url).pathname,
+        this.#paths.local(new URL(request.url)),
         await request.text()
       );
       return new Response(null, {
@@ -160,7 +154,7 @@ export class Realm {
       });
     }
 
-    let localName = this.localName(url);
+    let localName = this.#paths.local(url);
 
     let handle = await this.getFileWithFallbacks(localName);
 
@@ -248,12 +242,15 @@ export class Realm {
 
   private async handleJSONAPI(request: Request): Promise<Response> {
     let url = new URL(request.url);
+    let localPath = this.#paths.local(url);
+
     // create card data
     if (request.method === "POST") {
-      if (url.pathname.startsWith("_")) {
+      if (localPath.startsWith("_")) {
         return methodNotAllowed(request);
       }
-      if (url.pathname !== "/") {
+      // detecting top-level URL such that request.url === realm.url resulting in empty localPath
+      if (localPath !== "") {
         return notFound(request, `Can't POST to ${url.href}`);
       }
       let json = await request.json();
@@ -306,7 +303,7 @@ export class Realm {
 
     // Update card data
     if (request.method === "PATCH") {
-      if (url.pathname.startsWith("_")) {
+      if (localPath.startsWith("_")) {
         return methodNotAllowed(request);
       }
 
@@ -325,9 +322,7 @@ export class Realm {
 
       let card = merge({ data: original }, patch);
       delete (card as any).data.id; // don't write the ID to the file
-      let path = url.pathname.endsWith(".json")
-        ? url.pathname
-        : url.pathname + ".json";
+      let path = localPath.endsWith(".json") ? localPath : localPath + ".json";
       await this.write(path, JSON.stringify(card, null, 2));
       card.data.id = url.href.replace(/\.json$/, "");
       card.data.links = { self: url.href };
@@ -341,18 +336,18 @@ export class Realm {
     }
 
     if (request.method === "GET") {
-      if (url.pathname === "/_cardsOf") {
+      if (localPath === "/_cardsOf") {
         return await this.getCardsOf(request);
       }
-      if (url.pathname === "/_typeOf") {
+      if (localPath === "/_typeOf") {
         return await this.getTypeOf(request);
       }
-      if (url.pathname === "/_search") {
+      if (localPath === "/_search") {
         return await this.search(request);
       }
 
       // Get directory listing
-      if (url.pathname.endsWith("/")) {
+      if (url.href.endsWith("/")) {
         let jsonapi = await this.getDirectoryListingAsJSONAPI(url);
         if (!jsonapi) {
           return notFound(request);
@@ -367,7 +362,12 @@ export class Realm {
       if (data) {
         (data as any).links = { self: url.href };
         let card = { data };
-        await this.addLastModifiedToCardDoc(card, url.pathname + ".json");
+        // TODO: this is adding the wrong lastModified, because our data came
+        // from the search index and the lastModified is coming from the realm
+        // (i.e. the realm filesystem). Those two could differ. The lastModified
+        // time should already live inside the search index so they always
+        // match.
+        await this.addLastModifiedToCardDoc(card, localPath + ".json");
         return new Response(JSON.stringify(card, null, 2), {
           headers: {
             "Last-Modified": formatRFC7231(card.data.meta.lastModified!),
@@ -613,7 +613,7 @@ export class Realm {
     );
   }
 
-  private async addLastModifiedToCardDoc(card: CardDocument, path: string) {
+  private async addLastModifiedToCardDoc(card: CardDocument, path: LocalPath) {
     let { lastModified } = (await this.#adapter.openFile(path)) ?? {};
     if (!lastModified) {
       throw new CardError(

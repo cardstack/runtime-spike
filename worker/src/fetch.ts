@@ -1,6 +1,6 @@
 import { CardError } from '@cardstack/runtime-common/error';
 import { generateExternalStub } from '@cardstack/runtime-common/externals';
-import { baseOrigin, Realm } from '@cardstack/runtime-common';
+import { Realm, baseRealm } from '@cardstack/runtime-common';
 
 export class FetchHandler {
   private realm: Realm | undefined;
@@ -28,7 +28,7 @@ export class FetchHandler {
       // TODO Create a BaseRealm that extends Realm that handles all the
       // requests for the base realm -- this can be scaffolding for now, but it
       // should exercise the Realm API
-      if (url.origin === baseOrigin && url.pathname.startsWith('/base/')) {
+      if (baseRealm.inRealm(url)) {
         return generateExternalStub(
           url.pathname.replace('/base/', 'runtime-spike/lib/')
         );

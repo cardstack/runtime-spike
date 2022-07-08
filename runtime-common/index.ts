@@ -33,8 +33,8 @@ export interface DirectoryEntryRelationship {
     kind: "directory" | "file";
   };
 }
-export const protocolRelativeBaseOrigin = "//cardstack.com";
-export const baseOrigin = `http:${protocolRelativeBaseOrigin}`;
+import { RealmPaths } from './paths';
+export const baseRealm = new RealmPaths("https://cardstack.com/base/");
 
 export const executableExtensions = [".js", ".gjs", ".ts", ".gts"];
 

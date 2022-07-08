@@ -1,6 +1,4 @@
 import { RealmAdapter, Kind, FileRef } from '@cardstack/runtime-common';
-// import { CardError } from '@cardstack/runtime-common/error';
-import { traverse } from './file-system';
 
 export class LocalRealm implements RealmAdapter {
   constructor(private fs: FileSystemDirectoryHandle) {}
@@ -37,12 +35,11 @@ export class LocalRealm implements RealmAdapter {
         },
         lastModified: file.lastModified,
       };
-    } catch (err) {
-      console.log(`${err.name}: "${path}"`);
-      // if (!(err instanceof CardError) || err.response.status !== 404) {
-      //   throw err;
-      // }
-      return undefined;
+    } catch (err: any) {
+      if (['TypeMismatchError', 'NotFoundError'].includes(err.name)) {
+        return undefined;
+      }
+      throw err;
     }
   }
 
@@ -62,4 +59,43 @@ export class LocalRealm implements RealmAdapter {
 
 function isTopPath(path: string): boolean {
   return path === '';
+}
+
+type HandleKind<T extends Kind> = T extends 'file'
+  ? FileSystemFileHandle
+  : FileSystemDirectoryHandle;
+
+export async function traverse<Target extends Kind>(
+  dirHandle: FileSystemDirectoryHandle,
+  path: string,
+  targetKind: Target,
+  opts?: { create?: boolean }
+): Promise<HandleKind<Target>> {
+  // the leading and trailing "/" will result in a superflous items in our path segments
+  if (path.startsWith('/')) {
+    path = path.slice(1);
+  }
+  if (path.endsWith('/')) {
+    path = path.slice(0, -1);
+  }
+
+  let pathSegments = path.split('/');
+  let create = opts?.create;
+
+  let handle = dirHandle;
+  while (pathSegments.length > 1) {
+    let segment = pathSegments.shift()!;
+    handle = await handle.getDirectoryHandle(segment, { create });
+  }
+
+  if (targetKind === 'file') {
+    return (await handle.getFileHandle(
+      pathSegments[0],
+      opts
+    )) as HandleKind<Target>;
+  }
+  return (await handle.getDirectoryHandle(
+    pathSegments[0],
+    opts
+  )) as HandleKind<Target>;
 }

@@ -11,7 +11,7 @@ module('Unit | realm', function () {
           attributes: {},
           meta: {
             adoptsFrom: {
-              module: '//cardstack.com/base/card-api',
+              module: 'https://cardstack.com/base/card-api',
               name: 'Card',
             },
           },
@@ -37,7 +37,7 @@ module('Unit | realm', function () {
         attributes: {},
         meta: {
           adoptsFrom: {
-            module: '//cardstack.com/base/card-api',
+            module: 'https://cardstack.com/base/card-api',
             name: 'Card',
           },
           lastModified: realm.lastModified.get('/dir/empty.json'),
@@ -67,7 +67,7 @@ module('Unit | realm', function () {
                 attributes: {},
                 meta: {
                   adoptsFrom: {
-                    module: '//cardstack.com/base/card-api',
+                    module: 'https://cardstack.com/base/card-api',
                     name: 'Card',
                   },
                 },
@@ -95,7 +95,7 @@ module('Unit | realm', function () {
               attributes: {},
               meta: {
                 adoptsFrom: {
-                  module: '//cardstack.com/base/card-api',
+                  module: 'https://cardstack.com/base/card-api',
                   name: 'Card',
                 },
               },
@@ -139,7 +139,7 @@ module('Unit | realm', function () {
                 attributes: {},
                 meta: {
                   adoptsFrom: {
-                    module: '//cardstack.com/base/card-api',
+                    module: 'https://cardstack.com/base/card-api',
                     name: 'Card',
                   },
                 },
@@ -198,7 +198,7 @@ module('Unit | realm', function () {
           },
           meta: {
             adoptsFrom: {
-              module: '//cardstack.com/base/card-api',
+              module: 'https://cardstack.com/base/card-api',
               name: 'Card',
             },
           },
@@ -221,7 +221,7 @@ module('Unit | realm', function () {
               },
               meta: {
                 adoptsFrom: {
-                  module: '//cardstack.com/base/card-api',
+                  module: 'https://cardstack.com/base/card-api',
                   name: 'Card',
                 },
               },
@@ -262,7 +262,7 @@ module('Unit | realm', function () {
             },
             meta: {
               adoptsFrom: {
-                module: '//cardstack.com/base/card-api',
+                module: 'https://cardstack.com/base/card-api',
                 name: 'Card',
               },
             },
