@@ -1,12 +1,6 @@
-import {
-  RealmAdapter,
-  Kind,
-  executableExtensions,
-  FileRef,
-} from '@cardstack/runtime-common';
-import { CardError } from '@cardstack/runtime-common/error';
+import { RealmAdapter, Kind, FileRef } from '@cardstack/runtime-common';
+// import { CardError } from '@cardstack/runtime-common/error';
 import { traverse } from './file-system';
-import { getLocalFileWithFallbacks } from './file-system';
 
 export class LocalRealm implements RealmAdapter {
   constructor(private fs: FileSystemDirectoryHandle) {}
@@ -44,9 +38,10 @@ export class LocalRealm implements RealmAdapter {
         lastModified: file.lastModified,
       };
     } catch (err) {
-      if (!(err instanceof CardError) || err.response.status !== 404) {
-        throw err;
-      }
+      console.log(`${err.name}: "${path}"`);
+      // if (!(err instanceof CardError) || err.response.status !== 404) {
+      //   throw err;
+      // }
       return undefined;
     }
   }

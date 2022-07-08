@@ -168,13 +168,11 @@ export class Realm {
       return notFound(request, `${localName} not found`);
     }
 
-    let pathSegments = localName.split("/");
-    let requestedName = pathSegments.pop()!;
-    if (handle.path !== requestedName) {
+    if (handle.path !== localName) {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: [...pathSegments, handle.path].join("/"),
+          Location: handle.path,
         },
       });
     }
@@ -388,6 +386,9 @@ export class Realm {
 
   // todo: I think we get rid of this
   private async readFileAsText(path: string): Promise<string> {
+    if (path.startsWith("/")) {
+      path = path.slice(1);
+    }
     let ref = await this.#adapter.openFile(path);
     if (!ref) {
       throw new Error("fixme todo");
@@ -613,7 +614,7 @@ export class Realm {
   }
 
   private async addLastModifiedToCardDoc(card: CardDocument, path: string) {
-    let { lastModified } = (await this.#adapter.statFile(path)) ?? {};
+    let { lastModified } = (await this.#adapter.openFile(path)) ?? {};
     if (!lastModified) {
       throw new CardError(
         systemError(`no last modified date available for file ${path}`)

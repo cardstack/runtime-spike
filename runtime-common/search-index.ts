@@ -6,7 +6,7 @@ import {
 import { Realm, Kind } from "./realm";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
-import ignore, { Ignore } from "ignore";
+// import ignore, { Ignore } from "ignore";
 
 export type CardRef =
   | {
@@ -191,7 +191,7 @@ export class SearchIndex {
   private directories = new URLMap<{ name: string; kind: Kind }[]>();
   private definitions = new Map<string, CardDefinition>();
   private exportedCardRefs = new Map<string, CardRef[]>();
-  private ignoreMap = new URLMap<Ignore>();
+  // private ignoreMap = new URLMap<Ignore>();
 
   constructor(
     private realm: Realm,
@@ -221,10 +221,12 @@ export class SearchIndex {
     // TODO we should be using ignore patterns for the current context so the
     // ignores are consistent with the index, i.e. don't use ignore file from a
     // previous search index run on a new search index
-    let ignorePatterns = await this.getIgnorePatterns(url);
-    if (ignorePatterns) {
-      this.ignoreMap.set(url, ignore().add(ignorePatterns));
-    }
+
+    // TODO: ignorePatterns
+    // let ignorePatterns = await this.getIgnorePatterns(url);
+    // if (ignorePatterns) {
+    //   this.ignoreMap.set(url, ignore().add(ignorePatterns));
+    // }
 
     let entries = directories.get(url);
     if (!entries) {
@@ -235,9 +237,9 @@ export class SearchIndex {
       this.localPath(url)
     )) {
       let innerURL = new URL(innerPath, this.realm.url);
-      if (this.isIgnored(innerURL)) {
-        return;
-      }
+      // if (this.isIgnored(innerURL)) {
+      //   return;
+      // }
 
       let name = innerPath.split("/").pop()!;
       if (kind === "file") {
@@ -568,42 +570,42 @@ export class SearchIndex {
     return this.modules.get(url)?.src;
   }
 
-  private async getIgnorePatterns(url: URL): Promise<string | undefined> {
-    try {
-      return await this.readFileAsText(new URL(".monacoignore", url).pathname);
-    } catch (e: any) {
-      if (e.name !== "NotFoundError" && e.name !== "TypeMismatchError") {
-        throw e;
-      }
-      try {
-        return await this.readFileAsText(new URL(".gitignore", url).pathname);
-      } catch (e: any) {
-        if (e.name !== "NotFoundError" && e.name !== "TypeMismatchError") {
-          throw e;
-        }
-      }
-    }
-    return undefined;
-  }
+  // private async getIgnorePatterns(url: URL): Promise<string | undefined> {
+  //   try {
+  //     return await this.readFileAsText(new URL(".monacoignore", url).pathname);
+  //   } catch (e: any) {
+  //     if (e.name !== "NotFoundError" && e.name !== "TypeMismatchError") {
+  //       throw e;
+  //     }
+  //     try {
+  //       return await this.readFileAsText(new URL(".gitignore", url).pathname);
+  //     } catch (e: any) {
+  //       if (e.name !== "NotFoundError" && e.name !== "TypeMismatchError") {
+  //         throw e;
+  //       }
+  //     }
+  //   }
+  //   return undefined;
+  // }
 
-  private isIgnored(url: URL): boolean {
-    if (this.ignoreMap.size === 0) {
-      return false;
-    }
-    // Test URL against closest ignore. (Should the ignores cascade? so that the
-    // child ignore extends the parent ignore?)
-    let ignoreURLs = [...this.ignoreMap.keys()].map((u) => u.href);
-    let matchingIgnores = ignoreURLs.filter((u) => url.href.includes(u));
-    let ignoreURL = matchingIgnores.sort((a, b) => b.length - a.length)[0] as
-      | string
-      | undefined;
-    if (!ignoreURL) {
-      return false;
-    }
+  // private isIgnored(url: URL): boolean {
+  //   if (this.ignoreMap.size === 0) {
+  //     return false;
+  //   }
+  //   // Test URL against closest ignore. (Should the ignores cascade? so that the
+  //   // child ignore extends the parent ignore?)
+  //   let ignoreURLs = [...this.ignoreMap.keys()].map((u) => u.href);
+  //   let matchingIgnores = ignoreURLs.filter((u) => url.href.includes(u));
+  //   let ignoreURL = matchingIgnores.sort((a, b) => b.length - a.length)[0] as
+  //     | string
+  //     | undefined;
+  //   if (!ignoreURL) {
+  //     return false;
+  //   }
 
-    let ignore = this.ignoreMap.get(new URL(ignoreURL))!;
-    return ignore.test(url.pathname).ignored;
-  }
+  //   let ignore = this.ignoreMap.get(new URL(ignoreURL))!;
+  //   return ignore.test(url.pathname).ignored;
+  // }
 }
 
 function isOurFieldDecorator(ref: ClassReference, inModule: URL): boolean {
