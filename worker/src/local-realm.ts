@@ -71,6 +71,7 @@ export async function traverse<Target extends Kind>(
   targetKind: Target,
   opts?: { create?: boolean }
 ): Promise<HandleKind<Target>> {
+  // TODO: our standard path handling says there won't be slashes, let's clean this up and confirm it works.
   // the leading and trailing "/" will result in a superflous items in our path segments
   if (path.startsWith('/')) {
     path = path.slice(1);

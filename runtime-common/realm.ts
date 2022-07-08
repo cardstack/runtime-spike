@@ -58,7 +58,7 @@ export class Realm {
   #paths: RealmPaths;
 
   get url(): string {
-    return this.#paths.realm;
+    return this.#paths.url;
   }
 
   constructor(url: string, adapter: RealmAdapter) {

@@ -1,5 +1,6 @@
 import { executableExtensions, baseRealm } from ".";
-import { Realm, Kind } from "./realm";
+import { Kind } from "./realm";
+import { RealmPaths } from "./paths";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 // import ignore, { Ignore } from "ignore";
@@ -190,7 +191,7 @@ export class SearchIndex {
   // private ignoreMap = new URLMap<Ignore>();
 
   constructor(
-    private realm: Realm,
+    private realm: RealmPaths,
     private readdir: (
       path: string
     ) => AsyncGenerator<{ name: string; path: string; kind: Kind }, void>,
@@ -201,13 +202,6 @@ export class SearchIndex {
     let newDirectories = new URLMap<{ name: string; kind: Kind }[]>();
     await this.visitDirectory(new URL(this.realm.url), newDirectories);
     await this.semanticPhase(newDirectories);
-  }
-
-  private localPath(url: URL): string {
-    if (url.href.startsWith(this.realm.url)) {
-      return url.href.slice(this.realm.url.length);
-    }
-    throw new Error(`${url.href} does not belong to realm ${this.realm.url}`);
   }
 
   private async visitDirectory(
@@ -230,7 +224,7 @@ export class SearchIndex {
       directories.set(url, entries);
     }
     for await (let { path: innerPath, kind } of this.readdir(
-      this.localPath(url)
+      this.realm.local(url)
     )) {
       let innerURL = new URL(innerPath, this.realm.url);
       // if (this.isIgnored(innerURL)) {
@@ -280,7 +274,7 @@ export class SearchIndex {
 
   private async visitFile(url: URL) {
     if (url.href.endsWith(".json")) {
-      let json = JSON.parse(await this.readFileAsText(this.localPath(url)));
+      let json = JSON.parse(await this.readFileAsText(this.realm.local(url)));
       if (isCardDocument(json)) {
         let instanceURL = new URL(url.href.replace(/\.json$/, ""));
         json.data.id = instanceURL.href;
@@ -288,7 +282,7 @@ export class SearchIndex {
       }
     } else if (hasExecutableExtension(url.href)) {
       let mod = new ModuleSyntax(
-        await this.readFileAsText(this.localPath(url))
+        await this.readFileAsText(this.realm.local(url))
       );
       this.modules.set(url, mod);
       this.modules.set(trimExecutableExtension(url), mod);
