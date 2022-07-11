@@ -23,7 +23,7 @@ export class MessageHandler {
         send(source, {
           type: 'directoryHandleResponse',
           handle: this.fs,
-          url: new URL('http://local-realm/'), // TODO: this is hardcoded, should come from realm.url
+          url: 'http://local-realm/', // TODO: this is hardcoded, should come from realm.url
         });
         return;
       case 'setDirectoryHandle':
@@ -32,7 +32,7 @@ export class MessageHandler {
         if (this.fs) {
           send(source, {
             type: 'setDirectoryHandleAcknowledged',
-            url: new URL('http://local-realm/'), // TODO: this is hardcoded, should come from realm.url
+            url: 'http://local-realm/', // TODO: this is hardcoded, should come from realm.url
           });
         }
         return;

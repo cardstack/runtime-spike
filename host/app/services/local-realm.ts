@@ -37,7 +37,7 @@ export default class LocalRealm extends Service {
         break;
       case 'wait-for-worker-handle-receipt':
         if (data.type === 'setDirectoryHandleAcknowledged') {
-          this.state.wait.fulfill(data.url);
+          this.state.wait.fulfill(new URL(data.url));
           return;
         }
         break;
@@ -61,7 +61,7 @@ export default class LocalRealm extends Service {
         type: 'available',
         handle,
         worker: this.state.worker,
-        url,
+        url: new URL(url),
       };
     } else {
       this.state = { type: 'empty', worker: this.state.worker };
