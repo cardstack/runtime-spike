@@ -58,7 +58,7 @@ export class TestRealmAdapter implements RealmAdapter {
     for (let [name, content] of Object.entries(dir)) {
       yield {
         name,
-        path: path === '' ? name : `${path}${name}`,
+        path: path === '' ? name : `${path}/${name}`,
         kind: typeof content === 'string' ? 'file' : 'directory',
       };
     }
@@ -114,7 +114,6 @@ export class TestRealmAdapter implements RealmAdapter {
     originalPath = segments.join('/')
   ): string | Dir {
     let dir: Dir | string = this.#files;
-    segments = segments.filter(Boolean); // this emulates our actual traverse's trimming or leading and traililng /'s
     while (segments.length > 0) {
       if (typeof dir === 'string') {
         throw new Error(`tried to use file as directory`);
