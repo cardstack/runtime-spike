@@ -23,13 +23,17 @@ export class MessageHandler {
         send(source, {
           type: 'directoryHandleResponse',
           handle: this.fs,
+          url: new URL('http://local-realm/'), // TODO: this is hardcoded, should come from realm.url
         });
         return;
       case 'setDirectoryHandle':
         this.fs = data.handle;
         this.finishedStarting();
         if (this.fs) {
-          send(source, { type: 'setDirectoryHandleAcknowledged' });
+          send(source, {
+            type: 'setDirectoryHandleAcknowledged',
+            url: new URL('http://local-realm/'), // TODO: this is hardcoded, should come from realm.url
+          });
         }
         return;
       default:
