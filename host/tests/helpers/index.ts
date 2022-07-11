@@ -1,5 +1,6 @@
 import { parse } from 'date-fns';
 import { Realm, Kind, RealmAdapter, FileRef } from '@cardstack/runtime-common';
+import { RealmPaths } from '@cardstack/runtime-common/paths';
 
 export function cleanWhiteSpace(text: string) {
   return text.replace(/\s+/g, ' ').trim();
@@ -25,6 +26,7 @@ export const TestRealm = {
 export class TestRealmAdapter implements RealmAdapter {
   #files: Dir = {};
   #lastModified: Map<string, number> = new Map();
+  #paths = new RealmPaths('http://test-realm/');
 
   constructor(flatFiles: Record<string, string | object>) {
     let now = Date.now();
@@ -35,11 +37,7 @@ export class TestRealmAdapter implements RealmAdapter {
       if (typeof dir === 'string') {
         throw new Error(`tried to use file as directory`);
       }
-      // TODO: fix path manipulation and how lastModified is set
-      this.#lastModified.set(
-        new URL(path, 'http://test-realm/').pathname.slice(1),
-        now
-      );
+      this.#lastModified.set(this.#paths.fileURL(path).href, now);
       if (typeof content === 'string') {
         dir[last] = content;
       } else {
@@ -82,7 +80,7 @@ export class TestRealmAdapter implements RealmAdapter {
     return {
       path,
       content,
-      lastModified: this.#lastModified.get(path)!,
+      lastModified: this.#lastModified.get(this.#paths.fileURL(path).href)!,
     };
   }
 
@@ -106,10 +104,7 @@ export class TestRealmAdapter implements RealmAdapter {
         ? contents
         : JSON.stringify(contents, null, 2);
     let lastModified = Date.now();
-    this.#lastModified.set(
-      new URL(path, 'http://test-realm/').pathname,
-      lastModified
-    );
+    this.#lastModified.set(this.#paths.fileURL(path).href, lastModified);
     return { lastModified };
   }
 
