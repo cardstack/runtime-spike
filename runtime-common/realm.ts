@@ -536,7 +536,7 @@ export class Realm {
         `Could not find card reference ${JSON.stringify(ref)}`
       );
     }
-    let data: DefinitionResource = {
+    let data: CardDefinitionResource = {
       id: def.key,
       type: "card-definition",
       relationships: {},
