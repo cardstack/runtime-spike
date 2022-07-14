@@ -527,15 +527,7 @@ export class Realm {
   private async getTypeOf(request: Request): Promise<Response> {
     let ref = parse(new URL(request.url).search, { ignoreQueryPrefix: true });
     if (!isCardRef(ref)) {
-      return new Response(
-        JSON.stringify({
-          errors: [`a valid card reference was not specified`],
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/vnd.api+json" },
-        }
-      );
+      return badRequest("a valid card reference was not specified");
     }
     let def = await this.#searchIndex.typeOf(ref);
     if (!def) {
@@ -573,7 +565,7 @@ export class Realm {
         },
       };
     }
-    return new Response(JSON.stringify(data, null, 2), {
+    return new Response(JSON.stringify({ data }, null, 2), {
       headers: { "Content-Type": "application/vnd.api+json" },
     });
   }
@@ -598,7 +590,7 @@ export class Realm {
   private cardRefToTypeURL(ref: CardRef): string {
     let module = new URL(getModuleContext(ref));
     if (this.#paths.inRealm(module)) {
-      return `${this.url}/_typeOf?${stringify(ref)}`;
+      return `${this.url}_typeOf?${stringify(ref)}`;
     }
 
     // TODO how to resolve the Realm URL of a module that does not come from our
