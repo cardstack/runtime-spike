@@ -536,7 +536,7 @@ export class Realm {
         `Could not find card reference ${JSON.stringify(ref)}`
       );
     }
-    let data: ResourceObjectWithId = {
+    let data: DefinitionResource = {
       id: def.key,
       type: "card-definition",
       relationships: {},
@@ -625,4 +625,19 @@ function lastModifiedHeader(
       ? { "Last-Modified": formatRFC7231(card.data.meta.lastModified) }
       : {}
   ) as {} | { "Last-Modified": string };
+}
+
+export interface CardDefinitionResource {
+  id: string;
+  type: "card-definition";
+  relationships: {
+    [fieldName: string]: {
+      links: {
+        related: string;
+      };
+      meta: {
+        type: "super" | "contains" | "containsMany";
+      };
+    };
+  };
 }

@@ -3,6 +3,7 @@ import { restartableTask } from 'ember-concurrency';
 import { taskFor } from 'ember-concurrency-ts';
 import { tracked } from '@glimmer/tracking';
 import { CardRef } from '@cardstack/runtime-common';
+import { CardDefinitionResource } from '@cardstack/runtime-common/realm';
 import { stringify } from 'qs';
 import { service } from '@ember/service';
 import LocalRealm from '../services/local-realm';
@@ -15,20 +16,6 @@ interface Type {
   id: string;
   super: Type | undefined;
   fields: { name: string; card: Type; type: 'contains' | 'containsMany' }[];
-}
-
-interface DefinitionResource {
-  id: string;
-  relationships: {
-    [fieldName: string]: {
-      links: {
-        related: string;
-      };
-      meta: {
-        type: 'super' | 'contains' | 'containsMany';
-      };
-    };
-  };
 }
 
 export class CardType extends Resource<Args> {
@@ -61,7 +48,7 @@ export class CardType extends Resource<Args> {
       fields: (
         await Promise.all(
           Object.entries(
-            def.relationships as DefinitionResource['relationships']
+            def.relationships as CardDefinitionResource['relationships']
           ).map(async ([fieldName, fieldDef]) => {
             if (fieldName === '_super') {
               return undefined;
@@ -77,7 +64,7 @@ export class CardType extends Resource<Args> {
     };
   }
 
-  private async load(typeOfURL: string): Promise<DefinitionResource> {
+  private async load(typeOfURL: string): Promise<CardDefinitionResource> {
     let response = await fetch(typeOfURL, {
       headers: {
         Accept: 'application/vnd.api+json',
@@ -85,7 +72,7 @@ export class CardType extends Resource<Args> {
     });
 
     let json = await response.json();
-    return json.data as DefinitionResource;
+    return json.data as CardDefinitionResource;
   }
 }
 
