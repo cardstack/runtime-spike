@@ -588,7 +588,7 @@ export class Realm {
   }
 
   private cardRefToTypeURL(ref: CardRef): string {
-    let module = new URL(getModuleContext(ref));
+    let module = new URL(getExportedCardContext(ref).module);
     if (this.#paths.inRealm(module)) {
       return `${this.url}_typeOf?${stringify(ref)}`;
     }
@@ -610,11 +610,14 @@ export class Realm {
 
 export type Kind = "file" | "directory";
 
-function getModuleContext(ref: CardRef): string {
+export function getExportedCardContext(ref: CardRef): {
+  module: string;
+  name: string;
+} {
   if (ref.type === "exportedCard") {
-    return ref.module;
+    return { module: ref.module, name: ref.name };
   } else {
-    return getModuleContext(ref.card);
+    return getExportedCardContext(ref.card);
   }
 }
 function lastModifiedHeader(

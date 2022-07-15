@@ -3,8 +3,12 @@ import { restartableTask } from 'ember-concurrency';
 import { taskFor } from 'ember-concurrency-ts';
 import { tracked } from '@glimmer/tracking';
 import { CardRef } from '@cardstack/runtime-common';
-import { CardDefinitionResource } from '@cardstack/runtime-common/realm';
-import { stringify } from 'qs';
+import {
+  CardDefinitionResource,
+  getExportedCardContext,
+} from '@cardstack/runtime-common/realm';
+import { isCardRef } from '@cardstack/runtime-common/search-index';
+import { stringify, parse } from 'qs';
 import { service } from '@ember/service';
 import LocalRealm from '../services/local-realm';
 
@@ -14,6 +18,10 @@ interface Args {
 
 interface Type {
   id: string;
+  exportedCardContext: {
+    module: string;
+    name: string;
+  };
   super: Type | undefined;
   fields: { name: string; card: Type; type: 'contains' | 'containsMany' }[];
 }
@@ -40,9 +48,18 @@ export class CardType extends Resource<Args> {
   }
 
   private async makeCardType(typeOfURL: string): Promise<Type> {
+    let ref = parse(new URL(typeOfURL).search, { ignoreQueryPrefix: true });
+    if (!isCardRef(ref)) {
+      throw new Error(
+        `The url ${typeOfURL} does not contain a valid card reference`
+      );
+    }
+    let { module, name } = getExportedCardContext(ref);
+
     let def = await this.load(typeOfURL);
     return {
       id: def.id,
+      exportedCardContext: { module, name },
       super: def.relationships._super
         ? await this.makeCardType(def.relationships._super.links.related)
         : undefined,

@@ -38,4 +38,20 @@ module('Integration | schema', function (hooks) {
     assert.dom('[data-test-adopts-from').hasText('Adopts From: https://cardstack.com/base/card-api/Card');
     assert.dom('[data-test-field="firstName"]').hasText('firstName - contains - field card ID: https://cardstack.com/base/string/default');
   });
+
+  test('renders link to field card for contained field', async function(assert) {
+    const args: CardRef =  { type: 'exportedCard', module: 'http://test-realm/post', name: 'Post' };
+    await renderComponent(
+      class TestDriver extends GlimmerComponent {
+        <template>
+          <Schema @ref={{args}} />
+        </template>
+      }
+    );
+
+    await waitUntil(() => Boolean(document.querySelector('[data-test-card-id]')));
+    assert.dom('[data-test-field="author"] a[href="/?path=person"]').exists('link to person card exists');
+    assert.dom('[data-test-field="title"]').exists('the title field exists')
+    assert.dom('[data-test-field="title"] a').doesNotExist('the title field has no link');
+  });
 });

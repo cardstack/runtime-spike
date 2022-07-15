@@ -43,6 +43,55 @@ export default function () {
           },
         },
       },
+      {
+        cardRefs: [
+          {
+            type: 'exportedCard',
+            module: 'http://test-realm/post.gts',
+            name: 'Post',
+          },
+          {
+            type: 'exportedCard',
+            module: 'http://test-realm/post',
+            name: 'Post',
+          },
+        ],
+        response: {
+          data: {
+            id: 'http://test-realm/post/Post',
+            type: 'card-definition',
+            relationships: {
+              _super: {
+                links: {
+                  related:
+                    'https://cardstack.com/base/_typeOf?type=exportedCard&module=https%3A%2F%2Fcardstack.com%2Fbase%2Fcard-api&name=Card',
+                },
+                meta: {
+                  type: 'super',
+                },
+              },
+              author: {
+                links: {
+                  related:
+                    'http://test-realm/_typeOf?type=exportedCard&module=http%3A%2F%2Ftest-realm%2Fperson&name=Person',
+                },
+                meta: {
+                  type: 'contains',
+                },
+              },
+              title: {
+                links: {
+                  related:
+                    'https://cardstack.com/base/_typeOf?type=exportedCard&module=https%3A%2F%2Fcardstack.com%2Fbase%2Fstring&name=default',
+                },
+                meta: {
+                  type: 'contains',
+                },
+              },
+            },
+          },
+        },
+      },
     ]);
   });
 
