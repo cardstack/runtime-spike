@@ -38,6 +38,13 @@ export class CardRefs extends Resource<Args> {
       }
     );
 
+    if (!response.ok) {
+      throw new Error(
+        `Could not load card refs for module ${module}: ${
+          response.status
+        } - ${await response.text()}`
+      );
+    }
     let json = await response.json();
     this.refs =
       (json.data.attributes?.cardExports as CardRef[] | undefined) ?? [];

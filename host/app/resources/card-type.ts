@@ -35,7 +35,8 @@ export class CardType extends Resource<Args> {
 
   @restartableTask private async assembleType(ref: CardRef) {
     let url = `${this.localRealmURL.href}_typeOf?${stringify(ref)}`;
-    this.type = await this.makeCardType(url);
+    let type = await this.makeCardType(url);
+    this.type = type;
   }
 
   private async makeCardType(typeOfURL: string): Promise<Type> {
@@ -70,6 +71,14 @@ export class CardType extends Resource<Args> {
         Accept: 'application/vnd.api+json',
       },
     });
+
+    if (!response.ok) {
+      throw new Error(
+        `Could not load card type for ${typeOfURL}: ${
+          response.status
+        } - ${await response.text()}`
+      );
+    }
 
     let json = await response.json();
     return json.data as CardDefinitionResource;
