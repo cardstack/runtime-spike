@@ -62,8 +62,9 @@ export default class Schema extends Component<Signature> {
             {{/each}}
           </ul>
         </p>
-        {{!-- template-lint-disable require-button-type --}}
-        <button {{on "click" this.displayEditor}} data-test-create-card>Create New {{this.cardType.type.exportedCardContext.name}}</button>
+        {{#let this.cardType.type.exportedCardContext.name as |name|}}
+          <button {{on "click" this.displayEditor}} type="button" data-test-create-card={{name}}>Create New {{name}}</button>
+        {{/let}}
       {{/if}}
     {{/if}}
   </template>
@@ -103,7 +104,7 @@ export default class Schema extends Component<Signature> {
 
   @action
   onSave(url: string) {
-    let path = new URL(url).pathname;
+    let path = this.realmPath.local(new URL(url));
     this.router.transitionTo({ queryParams: { path } });
   }
 }
