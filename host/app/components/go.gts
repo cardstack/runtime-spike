@@ -39,18 +39,7 @@ export default class Go extends Component<Signature> {
                       contentChanged=this.contentChanged}}></div>
         <div class="preview">
           {{#if (isRunnable this.openFile.name)}}
-            <ImportModule @url={{this.openFile.url}}>
-              <:ready as |module|>
-                <Module
-                  @url={{this.openFile.url}}
-                  @importModule={{module}}
-                />
-              </:ready>
-              <:error as |error|>
-                <h2>Encountered {{error.type}} error</h2>
-                <pre>{{error.message}}</pre>
-              </:error>
-            </ImportModule>
+            <Module @url={{this.openFile.url}} />
           {{else if this.openFileCardJSON}}
             <ImportModule @url={{relativeFrom this.openFileCardJSON.data.meta.adoptsFrom.module this.openFile.url}} >
               <:ready as |module|>

@@ -13,14 +13,12 @@ import { LinkTo } from '@ember/routing';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
 import CardEditor from './card-editor';
-import { Card } from '../lib/card-api';
-import { NewCardArgs } from './card-editor';
+import ImportModule from './import-module';
 import type RouterService from '@ember/routing/router-service';
 
 interface Signature {
   Args: {
     ref: CardRef;
-    module: Record<string, typeof Card>;
   }
 }
 
@@ -28,12 +26,20 @@ export default class Schema extends Component<Signature> {
   <template>
     {{#if this.cardType.type}}
       {{#if this.showEditor}}
-        <CardEditor
-          @card={{this.cardArgs}}
-          @module={{@module}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />
+        <ImportModule @url={{this.cardType.type.exportedCardContext.module}}>
+          <:ready as |module|>
+            <CardEditor
+              @card={{hash type="new" realmURL=this.localRealm.url.href context=this.cardType.type.exportedCardContext}}
+              @module={{module}}
+              @onSave={{this.onSave}}
+              @onCancel={{this.onCancel}}
+            />
+          </:ready>
+          <:error as |error|>
+            <h2>Encountered {{error.type}} error</h2>
+            <pre>{{error.message}}</pre>
+          </:error>
+        </ImportModule>
       {{else}}
         <p>
           <div data-test-card-id>Card ID: {{this.cardType.type.id}}</div>
@@ -56,6 +62,7 @@ export default class Schema extends Component<Signature> {
             {{/each}}
           </ul>
         </p>
+        {{!-- template-lint-disable require-button-type --}}
         <button {{on "click" this.displayEditor}} data-test-create-card>Create New {{this.cardType.type.exportedCardContext.name}}</button>
       {{/if}}
     {{/if}}
@@ -63,6 +70,7 @@ export default class Schema extends Component<Signature> {
 
   @service declare localRealm: LocalRealm;
   @service declare router: RouterService;
+  cardType = getCardType(this, () => this.args.ref);
   @tracked showEditor = false;
 
   @cached
@@ -71,22 +79,6 @@ export default class Schema extends Component<Signature> {
       throw new Error('Local realm is not available');
     }
     return new RealmPaths(this.localRealm.url);
-  }
-
-  get cardType() {
-    return getCardType(this, () => this.args.ref);
-  }
-
-  get cardArgs(): NewCardArgs {
-    if (!this.cardType.type) {
-      throw new Error('can not instantiate internal card type');
-    }
-
-    return {
-      type: 'new',
-      class: this.args.module[this.cardType.type.exportedCardContext.name],
-      name: this.cardType.type.exportedCardContext.name,
-    }
   }
 
   @action
