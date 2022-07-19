@@ -1,5 +1,5 @@
 import { RealmAdapter, Kind, FileRef } from '@cardstack/runtime-common';
-import type { LocalPath } from './paths';
+import { LocalPath } from '@cardstack/runtime-common/paths';
 
 export class LocalRealm implements RealmAdapter {
   constructor(private fs: FileSystemDirectoryHandle) {}
