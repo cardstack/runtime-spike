@@ -49,7 +49,7 @@ export interface RealmAdapter {
 
   openFile(path: LocalPath): Promise<FileRef | undefined>;
 
-  write(path: string, contents: string): Promise<{ lastModified: number }>;
+  write(path: LocalPath, contents: string): Promise<{ lastModified: number }>;
 }
 
 export class Realm {
@@ -279,8 +279,10 @@ export class Realm {
       }
     }
     let pathname = `${dirName}${++index}.json`;
+    let fileURL = this.#paths.fileURL(pathname);
+    let localPath: LocalPath = this.#paths.local(fileURL);
     let { lastModified } = await this.write(
-      pathname,
+      localPath,
       JSON.stringify(json, null, 2)
     );
     let newURL = new URL(pathname, url.origin).href.replace(/\.json$/, "");
@@ -328,7 +330,7 @@ export class Realm {
 
     let card = merge({ data: original }, patch);
     delete (card as any).data.id; // don't write the ID to the file
-    let path = `${this.#paths.local(url)}.json`;
+    let path: LocalPath = `${this.#paths.local(url)}.json`;
     let { lastModified } = await this.write(
       path,
       JSON.stringify(card, null, 2)

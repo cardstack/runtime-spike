@@ -31,8 +31,7 @@ export default class Go extends Component<Signature> {
   <template>
     <div class="editor">
       <div class="file-tree">
-        <FileTree @localRealm={{this.localRealm}}
-                  @path={{this.args.path}} />
+        <FileTree @localRealm={{this.localRealm}} @path={{@path}} />
       </div>
       {{#if this.openFile}}
         <div {{monaco content=this.openFile.content
@@ -40,14 +39,25 @@ export default class Go extends Component<Signature> {
                       contentChanged=this.contentChanged}}></div>
         <div class="preview">
           {{#if (isRunnable this.openFile.name)}}
-            <Module @url={{this.openFile.url}} />
+            <ImportModule @url={{this.openFile.url}}>
+              <:ready as |module|>
+                <Module
+                  @url={{this.openFile.url}}
+                  @importModule={{module}}
+                />
+              </:ready>
+              <:error as |error|>
+                <h2>Encountered {{error.type}} error</h2>
+                <pre>{{error.message}}</pre>
+              </:error>
+            </ImportModule>
           {{else if this.openFileCardJSON}}
             <ImportModule @url={{relativeFrom this.openFileCardJSON.data.meta.adoptsFrom.module this.openFile.url}} >
               <:ready as |module|>
                 <CardEditor
                   @module={{module}}
                   @card={{this.cardArgs}}
-                  @formats={{formats}}
+                  @formats={{this.formats}}
                 />
               </:ready>
                <:error as |error|>
@@ -64,6 +74,7 @@ export default class Go extends Component<Signature> {
     </div>
   </template>
 
+  formats = formats;
   @service declare localRealm: LocalRealm;
   @tracked jsonError: string | undefined;
 
