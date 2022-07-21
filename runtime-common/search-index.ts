@@ -4,6 +4,7 @@ import { RealmPaths, LocalPath } from "./paths";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 import ignore, { Ignore } from "ignore";
+import { Query, assertQuery } from "./query";
 
 export type CardRef =
   | {
@@ -107,8 +108,6 @@ export function isCardDocument(doc: any): doc is CardDocument {
   }
   return "data" in doc && isCardResource(doc.data);
 }
-
-type Query = unknown;
 
 export interface CardDefinition {
   id: CardRef;
@@ -482,8 +481,44 @@ export class SearchIndex {
   }
 
   // TODO: complete these types
-  async search(_query: Query): Promise<CardResource[]> {
-    return [...this.instances.values()];
+  async search(query: Query): Promise<CardResource[]> {
+    assertQuery(query);
+    let results = [...this.instances.values()];
+
+    if (!query || Object.keys(query).length === 0) {
+      return results;
+    }
+
+    if (query.filter) {
+      if ("eq" in query.filter) {
+        for (let [key, value] of Object.entries(query.filter.eq)) {
+          results = results.filter((c) => {
+            let fields = key.split(".");
+            if (fields.length > 1) {
+              let compValue = c.attributes;
+              while (fields.length > 0 && compValue) {
+                let field = fields.shift();
+                compValue = compValue?.[field!];
+              }
+              return compValue === value;
+            } else {
+              return c.attributes?.[key] === value;
+            }
+          });
+        }
+        return results;
+      } else {
+        throw new Error(
+          `Query uses unimplemented filter: ${JSON.stringify(query.filter)}`
+        );
+      }
+    }
+
+    if (query.sort) {
+      throw new Error(`Query sorting is not yet implemented`);
+    }
+
+    throw new Error(`Query is invalid: ${JSON.stringify(query)}`);
   }
 
   async typeOf(ref: CardRef): Promise<CardDefinition | undefined> {
