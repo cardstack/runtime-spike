@@ -495,14 +495,14 @@ export class SearchIndex {
           results = results.filter((c) => {
             let fields = key.split(".");
             if (fields.length > 1) {
-              let compValue = c.attributes;
+              let compValue = c as Record<string, any>;
               while (fields.length > 0 && compValue) {
                 let field = fields.shift();
                 compValue = compValue?.[field!];
               }
               return compValue === value;
             } else {
-              return c.attributes?.[key] === value;
+              return (c as Record<string, any>)[key] === value;
             }
           });
         }
@@ -535,10 +535,6 @@ export class SearchIndex {
     url: URL
   ): Promise<{ name: string; kind: Kind }[] | undefined> {
     return this.directories.get(url);
-  }
-  // TODO merge this into the .search() API after we get the queries working
-  async card(url: URL): Promise<CardResource | undefined> {
-    return this.instances.get(url);
   }
 
   // TODO merge this into the .search() API after we get the queries working

@@ -706,37 +706,45 @@ module('Unit | search-index', function () {
       await indexer.run();
     });
 
-    test('can filter cards by using `eq` on attributes', async function (assert) {
+    test('can filter cards by id', async function (assert) {
       let matching = await indexer.search({
-        filter: { eq: { name: 'card 1' } },
+        filter: {
+          eq: {
+            id: 'http://test-realm/card-1',
+          },
+        },
       });
-      assert.strictEqual(matching.length, 2);
-      assert.strictEqual(matching[0].id, 'http://test-realm/card-1');
+      assert.strictEqual(matching.length, 1, 'found one card');
+      assert.strictEqual(
+        matching[0]?.id,
+        'http://test-realm/card-1',
+        'card id is correct'
+      );
     });
 
     test('can use `eq` filter on multiple fields', async function (assert) {
       let matching = await indexer.search({
         filter: {
           eq: {
-            name: 'card 1',
-            type: 'article',
+            'attributes.name': 'card 1',
+            'attributes.type': 'article',
           },
         },
       });
       assert.strictEqual(matching.length, 1);
-      assert.strictEqual(matching[0].id, 'http://test-realm/cards/1');
+      assert.strictEqual(matching[0]?.id, 'http://test-realm/cards/1');
     });
 
-    test('can filter on a nested field using eq', async function (assert) {
+    test('can filter on a deeply nested field using `eq`', async function (assert) {
       let matching = await indexer.search({
         filter: {
           eq: {
-            'author.email': 'carl@stack.com',
+            'attributes.author.email': 'carl@stack.com',
           },
         },
       });
       assert.strictEqual(matching.length, 1);
-      assert.strictEqual(matching[0].id, 'http://test-realm/cards/2');
+      assert.strictEqual(matching[0]?.id, 'http://test-realm/cards/2');
     });
   });
 });
