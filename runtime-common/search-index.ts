@@ -4,7 +4,7 @@ import { RealmPaths, LocalPath } from "./paths";
 import { ModuleSyntax } from "./module-syntax";
 import { ClassReference, PossibleCardClass } from "./schema-analysis-plugin";
 import ignore, { Ignore } from "ignore";
-import { Query, assertQuery } from "./query";
+import { Query, Filter, assertQuery } from "./query";
 
 export type CardRef =
   | {
@@ -500,27 +500,7 @@ export class SearchIndex {
 
     if (query.filter) {
       results = results.length ? results : [...this.instances.values()];
-      if ("eq" in query.filter) {
-        for (let [key, value] of Object.entries(query.filter.eq)) {
-          results = results.filter((c) => {
-            let fields = key.split(".");
-            if (fields.length > 1) {
-              let compValue = c as Record<string, any>;
-              while (fields.length > 0 && compValue) {
-                let field = fields.shift();
-                compValue = compValue?.[field!];
-              }
-              return compValue === value;
-            } else {
-              return (c as Record<string, any>)[key] === value;
-            }
-          });
-        }
-      } else {
-        throw new Error(
-          `Query uses unimplemented filter: ${JSON.stringify(query.filter)}`
-        );
-      }
+      results = filterCardData(query.filter, results);
     }
 
     if (query.sort) {
@@ -674,4 +654,52 @@ export async function getExternalCardDefinition(
   throw new Error(
     `unimplemented: don't know how to look up card types for ${moduleURL.href}`
   );
+}
+
+function filterCardData(
+  filter: Filter,
+  results: CardResource[],
+  opts?: { negate?: true }
+): CardResource[] {
+  if ("not" in filter) {
+    results = filterCardData(filter.not, results, { negate: true });
+  }
+
+  if ("eq" in filter) {
+    results = filterByFieldData(filter.eq, results, opts);
+  }
+
+  return results;
+}
+
+function filterByFieldData(
+  query: Record<string, any>,
+  instances: CardResource[],
+  opts?: { negate?: true }
+): CardResource[] {
+  let results = instances as Record<string, any>[];
+
+  for (let [key, value] of Object.entries(query)) {
+    results = results.filter((c) => {
+      let fields = key.split(".");
+      if (fields.length > 1) {
+        let compValue = c;
+        while (fields.length > 0 && compValue) {
+          let field = fields.shift();
+          compValue = compValue?.[field!];
+        }
+        if (opts?.negate) {
+          return compValue !== value;
+        }
+        return compValue === value;
+      } else {
+        if (opts?.negate) {
+          return c[key] !== value;
+        }
+        return c[key] === value;
+      }
+    });
+  }
+
+  return results as CardResource[];
 }
