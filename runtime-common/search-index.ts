@@ -483,13 +483,23 @@ export class SearchIndex {
   // TODO: complete these types
   async search(query: Query): Promise<CardResource[]> {
     assertQuery(query);
-    let results = [...this.instances.values()];
 
     if (!query || Object.keys(query).length === 0) {
-      return results;
+      return [...this.instances.values()];
+    }
+
+    let results = [];
+
+    if (query.id) {
+      let card = this.instances.get(new URL(query.id));
+      if (!card) {
+        return [];
+      }
+      results.push(card); // return here?
     }
 
     if (query.filter) {
+      results = results.length ? results : [...this.instances.values()];
       if ("eq" in query.filter) {
         for (let [key, value] of Object.entries(query.filter.eq)) {
           results = results.filter((c) => {
@@ -506,7 +516,6 @@ export class SearchIndex {
             }
           });
         }
-        return results;
       } else {
         throw new Error(
           `Query uses unimplemented filter: ${JSON.stringify(query.filter)}`
@@ -518,7 +527,7 @@ export class SearchIndex {
       throw new Error(`Query sorting is not yet implemented`);
     }
 
-    throw new Error(`Query is invalid: ${JSON.stringify(query)}`);
+    return results;
   }
 
   async typeOf(ref: CardRef): Promise<CardDefinition | undefined> {

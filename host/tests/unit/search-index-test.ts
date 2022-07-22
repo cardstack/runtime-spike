@@ -706,19 +706,36 @@ module('Unit | search-index', function () {
       await indexer.run();
     });
 
-    test('can filter cards by id', async function (assert) {
+    test('can search cards by id', async function (assert) {
       let matching = await indexer.search({
-        filter: {
-          eq: {
-            id: 'http://test-realm/card-1',
-          },
-        },
+        id: 'http://test-realm/card-1',
       });
       assert.strictEqual(matching.length, 1, 'found one card');
       assert.strictEqual(
         matching[0]?.id,
         'http://test-realm/card-1',
         'card id is correct'
+      );
+    });
+
+    test('can filter cards by using `eq` on attributes', async function (assert) {
+      let matching = await indexer.search({
+        filter: {
+          eq: {
+            'attributes.name': 'card 1',
+          },
+        },
+      });
+      assert.strictEqual(matching.length, 2, 'found matching cards');
+      assert.strictEqual(
+        matching[0]?.id,
+        'http://test-realm/card-1',
+        'first card id is correct'
+      );
+      assert.strictEqual(
+        matching[1]?.id,
+        'http://test-realm/cards/1',
+        'second card id is correct'
       );
     });
 
