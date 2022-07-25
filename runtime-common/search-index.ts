@@ -488,26 +488,16 @@ export class SearchIndex {
       return [...this.instances.values()];
     }
 
-    let results = [];
-
     if (query.id) {
       let card = this.instances.get(new URL(query.id));
-      if (!card) {
-        return [];
-      }
-      results.push(card); // return here?
+      return card ? [card] : [];
     }
 
     if (query.filter) {
-      results = results.length ? results : [...this.instances.values()];
-      results = filterCardData(query.filter, results);
+      return filterCardData(query.filter, [...this.instances.values()]);
     }
 
-    if (query.sort) {
-      throw new Error(`Query sorting is not yet implemented`);
-    }
-
-    return results;
+    throw new Error("Not implemented");
   }
 
   async typeOf(ref: CardRef): Promise<CardDefinition | undefined> {
@@ -661,6 +651,10 @@ function filterCardData(
   results: CardResource[],
   opts?: { negate?: true }
 ): CardResource[] {
+  if (!("not" in filter) && !("eq" in filter)) {
+    throw new Error("Not implemented");
+  }
+
   if ("not" in filter) {
     results = filterCardData(filter.not, results, { negate: true });
   }
