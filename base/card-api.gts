@@ -13,6 +13,7 @@ export const serialize = Symbol('cardstack-serialize');
 export const useIndexBasedKey = Symbol('cardstack-use-index-based-key');
 export const fieldDecorator = Symbol('cardstack-field-decorator');
 export const fieldType = Symbol('cardstack-field-type');
+export const queryableValue = Symbol('cardstack-queryable-value');
 
 const isField = Symbol('cardstack-field');
 
@@ -117,6 +118,59 @@ function getDataBucket(instance: object): Map<string, any> {
     deserializedData.set(instance, deserialized);
   }
   return deserialized;
+}
+
+type Scalar = string | number | boolean | null | undefined;
+
+// This operates on both an instance and a field card class, we need to consider
+// both the left and right side of the operand we are using for comparison. On
+// one side you will be testing an actual card instance value from the search
+// index, on the other side you will be testing a user defined predicate that
+// likely was received as a search query param and will be divorced from an actual
+// card instance. 
+export function getQueryableValue(model: Card, fieldName: string): Scalar;
+export function getQueryableValue(fieldCard: typeof Card, value: any ): Scalar;
+export function getQueryableValue(modelOrFieldCard:typeof Card | Card, fieldNameOrValue: string | any ): Scalar {
+  let fieldCard: typeof Card;
+  let fieldName: string | undefined;
+  let fieldValue: any;
+  let model: Card | undefined;
+  if (isBaseCard in modelOrFieldCard) {
+    // this is a card instance
+    if (typeof fieldNameOrValue !== 'string') {
+      throw new Error(`Expected to find string fieldName parameter, but it was not a string`);
+    }
+    fieldName = fieldNameOrValue;
+    model = modelOrFieldCard as Card;
+    let field = getField(model.constructor, fieldName);
+    if (!field) {
+      throw new Error(`tried to getQueryableValue for field "${fieldName}" which does not exist in card ${model.constructor.name}`);
+    }
+    fieldCard = field.card;
+  } else {
+    // this is a field card class
+    fieldCard = modelOrFieldCard as typeof Card;
+    fieldValue = fieldNameOrValue;
+  }
+
+  if (!(primitive in fieldCard)) {
+    if (model && fieldName) {
+      throw new Error(`cannot getQueryableValue for non-primitive field "${fieldName}" in card ${fieldCard.name}`);
+    }
+      throw new Error(`cannot getQueryableValue for non-primitive field card ${fieldCard.name}`);
+  }
+
+  if (typeof (fieldCard as any)[queryableValue] !== 'function') {
+    if (model && fieldName) {
+      return (model as any)[fieldName];
+    }
+    return fieldValue;
+  }
+
+  if (model && fieldName) {
+    return (fieldCard as any)[queryableValue]((model as any)[fieldName]);
+  }
+  return (fieldCard as any)[queryableValue](fieldValue);
 }
 
 export function serializedGet<CardT extends CardConstructor>(model: InstanceType<CardT>, fieldName: string ) {
