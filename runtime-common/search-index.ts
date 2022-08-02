@@ -7,6 +7,11 @@ import ignore, { Ignore } from "ignore";
 import { stringify } from "qs";
 import { Query, Filter } from "./query";
 
+export type ExportedCardRef = {
+  module: string;
+  name: string;
+};
+
 export type CardRef =
   | {
       type: "exportedCard";
@@ -495,9 +500,15 @@ export class SearchIndex {
     return url.href.startsWith(this.realm.url);
   }
 
-  // TODO: complete these types
   async search(query: Query): Promise<CardResource[]> {
-    let matcher = buildMatcher(query.filter);
+    let matcher = buildMatcher(
+      query.filter,
+      {
+        module: `${baseRealm.url}card-api`,
+        name: "Card",
+      },
+      this.realm.url
+    );
     return [...this.instances.values()]
       .filter(matcher)
       .map((entry) => entry.resource);
@@ -547,7 +558,7 @@ export class SearchIndex {
       // so that we now how to ask for it's cards' definitions
       throw new Error(`not implemented`);
     }
-    let url = `${this.realm.baseRealmURL}_typeOf?${stringify(ref)}`;
+    let url = this.realm.baseRealmURL + "_typeOf?" + stringify(ref);
     let response = await fetch(url, {
       headers: {
         Accept: "application/vnd.api+json",
@@ -615,28 +626,100 @@ function flatten(obj: Record<string, any>): Record<string, any> {
   return result;
 }
 
+// Matchers are three-valued (true, false, null) because a query that talks
+// about a field that is not even present on a given card results in `null` to
+// distinguish it from a field that is present but not matching the filter
+// (`false`)
 function buildMatcher(
-  filter: Filter | undefined
-): (entry: SearchEntry) => boolean {
+  filter: Filter | undefined,
+  onRef: ExportedCardRef,
+  realmURL: string
+): (entry: SearchEntry) => boolean | null {
   if (!filter) {
     return (_entry) => true;
   }
+
+  if ("type" in filter) {
+    throw new Error("TODO");
+  }
+
+  let on = filter?.on ?? onRef;
+
+  if ("any" in filter) {
+    let matchers = filter.any.map((f) => buildMatcher(f, on, realmURL));
+    return (entry) => some(matchers, (m) => m(entry));
+  }
+
   if ("every" in filter) {
-    let matchers = filter.every.map((f) => buildMatcher(f));
-    return (entry) => matchers.every((m) => m(entry));
+    let matchers = filter.every.map((f) => buildMatcher(f, on, realmURL));
+    return (entry) => every(matchers, (m) => m(entry));
   }
 
   if ("not" in filter) {
-    let matcher = buildMatcher(filter.not);
-    return (entry) => !matcher(entry);
+    let matcher = buildMatcher(filter.not, on, realmURL);
+    return (entry) => {
+      let inner = matcher(entry);
+      if (inner == null) {
+        // irrelevant cards stay irrelevant, even when the query is inverted
+        return null;
+      } else {
+        return !inner;
+      }
+    };
   }
 
   if ("eq" in filter) {
     return (entry) =>
-      Object.entries(filter.eq).every(
-        ([fieldPath, value]) => entry.searchData![fieldPath] === value
-      );
+      every(Object.entries(filter.eq), ([fieldPath, value]) => {
+        if (
+          on.name === entry.resource.meta.adoptsFrom.name &&
+          trimExecutableExtension(new URL(on.module, realmURL)).href ===
+            trimExecutableExtension(
+              new URL(entry.resource.meta.adoptsFrom.module, realmURL)
+            ).href
+        ) {
+          return entry.searchData![fieldPath] === value;
+        } else {
+          return null;
+        }
+      });
   }
 
   throw new Error("Unknown filter");
+}
+
+// three-valued version of Array.every that propagates nulls. Here, the presence
+// of any nulls causes the whole thing to be null.
+function every<T>(
+  list: T[],
+  predicate: (t: T) => boolean | null
+): boolean | null {
+  let result = true;
+  for (let element of list) {
+    let status = predicate(element);
+    if (status == null) {
+      return null;
+    }
+    result = result && status;
+  }
+  return result;
+}
+
+// three-valued version of Array.some that propagates nulls. Here, the whole
+// expression becomes null only if the whole input is null.
+function some<T>(
+  list: T[],
+  predicate: (t: T) => boolean | null
+): boolean | null {
+  let result = null;
+  for (let element of list) {
+    let status = predicate(element);
+    if (status === true) {
+      return true;
+    }
+    if (status === false) {
+      result = false;
+    }
+  }
+  return result;
 }
