@@ -627,9 +627,12 @@ export class SearchIndex {
 
   private async strictTypeOf(ref: CardRef): Promise<CardDefinition> {
     let def = await this.typeOf(ref);
+    let { module, name } = ref as ExportedCardRef;
     if (!def) {
       throw new Error(
-        `Your filter refers to nonexistent type ${this.internalKeyFor(ref)}`
+        `Your filter refers to nonexistent type: import ${
+          name === "default" ? "default" : `{ ${name} }`
+        } from "${module}"`
       );
     }
     return def;

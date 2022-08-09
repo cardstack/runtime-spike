@@ -814,7 +814,7 @@ posts/ignore-me.gts
       } catch (err: any) {
         assert.strictEqual(
           err.message,
-          `Your filter refers to nonexistent type ${paths.url}nonexistent/Nonexistent`
+          `Your filter refers to nonexistent type: import { Nonexistent } from "${paths.url}nonexistent"`
         );
       }
     });
