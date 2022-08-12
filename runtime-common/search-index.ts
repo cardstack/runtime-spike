@@ -308,7 +308,7 @@ class CurrentRun {
     await this.handleInvalidations();
   }
 
-  private get api(): CardAPI {
+  public get api(): CardAPI {
     if (!this.#api) {
       throw new Error(`Card API was accessed before it was loaded`);
     }
@@ -447,8 +447,7 @@ class CurrentRun {
     }
   }
 
-<<<<<<< HEAD
-=======
+  // TODO refactor this into "typeOf"
   private async buildDefinition(
     url: URL,
     mod: ModuleSyntax,
@@ -574,10 +573,10 @@ class CurrentRun {
     return url.href.startsWith(this.realm.url);
   }
 
-  private async getExternalCardDefinition(
+  public async getExternalCardDefinition(
     ref: ExportedCardRef
   ): Promise<CardDefinition | undefined> {
-    let key = this.internalKeyFor({ type: "exportedCard", ...ref }, undefined); // these should always be absolute URLs
+    let key = internalKeyFor({ type: "exportedCard", ...ref }, undefined); // these should always be absolute URLs
     let promise = this.#externalDefinitionsCache.get(key);
     if (promise) {
       return await promise;
@@ -695,11 +694,11 @@ export class SearchIndex {
     return this.#current.isIgnored(url);
   }
 
+  // TODO hopefully this can get refactored away
   private async getExternalCardDefinition(
-    moduleURL: URL,
-    ref: CardRef
+    ref: ExportedCardRef
   ): Promise<CardDefinition | undefined> {
-    return await this.#current.getExternalCardDefinition(moduleURL, ref);
+    return await this.#current.getExternalCardDefinition(ref);
   }
 
   private async semanticPhase(): Promise<void> {
@@ -853,12 +852,14 @@ export class SearchIndex {
     );
   }
 
+  // TODO hopefully we can collapse the external card definitions into
+  // this.#current.definitions and the whole point of this method goes away
   private async getCardDefinition(
     ref: ExportedCardRef
   ): Promise<CardDefinition | undefined> {
     return (
-      this.definitions.get(
-        this.internalKeyFor({ type: "exportedCard", ...ref }, undefined) // assumes ref refers to absolute module URL
+      this.#current.definitions.get(
+        internalKeyFor({ type: "exportedCard", ...ref }, undefined) // assumes ref refers to absolute module URL
       ) ?? (await this.getExternalCardDefinition(ref))
     );
   }
@@ -875,7 +876,7 @@ export class SearchIndex {
     let fieldDef = def.fields.get(fieldName);
     if (!fieldDef) {
       throw new Error(
-        `Your filter refers to nonexistent field "${fieldName}" on type ${this.internalKeyFor(
+        `Your filter refers to nonexistent field "${fieldName}" on type ${internalKeyFor(
           { type: "exportedCard", ...ref },
           undefined // assumes absolute module URL
         )}`
@@ -1033,7 +1034,7 @@ export class SearchIndex {
       return (entry) =>
         every(Object.entries(filter.eq), ([fieldPath, value]) => {
           if (this.cardHasType(entry, ref)) {
-            let queryValue = this.api.getQueryableValue(
+            let queryValue = this.#current.api.getQueryableValue(
               fieldCards[fieldPath]!,
               value
             );
@@ -1076,22 +1077,34 @@ export class SearchIndex {
               (range.gt &&
                 !(
                   value >
-                  this.api.getQueryableValue(fieldCards[fieldPath]!, range.gt)
+                  this.#current.api.getQueryableValue(
+                    fieldCards[fieldPath]!,
+                    range.gt
+                  )
                 )) ||
               (range.lt &&
                 !(
                   value <
-                  this.api.getQueryableValue(fieldCards[fieldPath]!, range.lt)
+                  this.#current.api.getQueryableValue(
+                    fieldCards[fieldPath]!,
+                    range.lt
+                  )
                 )) ||
               (range.gte &&
                 !(
                   value >=
-                  this.api.getQueryableValue(fieldCards[fieldPath]!, range.gte)
+                  this.#current.api.getQueryableValue(
+                    fieldCards[fieldPath]!,
+                    range.gte
+                  )
                 )) ||
               (range.lte &&
                 !(
                   value <=
-                  this.api.getQueryableValue(fieldCards[fieldPath]!, range.lte)
+                  this.#current.api.getQueryableValue(
+                    fieldCards[fieldPath]!,
+                    range.lte
+                  )
                 ))
             ) {
               return false;
@@ -1117,7 +1130,6 @@ export class SearchIndex {
     }
     return def;
   }
-
 }
 
 function isOurFieldDecorator(ref: ClassReference, inModule: URL): boolean {
