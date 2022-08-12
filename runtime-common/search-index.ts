@@ -207,41 +207,61 @@ interface SearchEntry {
   types: string[] | undefined; // theses start out undefined during indexing and get defined during semantic phase
 }
 
-export class SearchIndex {
-  private instances = new URLMap<SearchEntry>();
-  private modules = new URLMap<ModuleSyntax>();
-  private definitions = new Map<string, CardDefinition>();
-  private exportedCardRefs = new Map<string, Map<string, ExportedCardRef>>();
-  private ignoreMap = new URLMap<Ignore>();
-  #api: CardAPI | undefined;
-  #externalDefinitionsCache = new Map<
-    string,
-    Promise<CardDefinition | undefined>
-  >();
-
-  constructor(
-    private realm: Realm,
-    private realmPaths: RealmPaths,
-    private readdir: (
-      path: string
-    ) => AsyncGenerator<{ name: string; path: string; kind: Kind }, void>,
-    private readFileAsText: (
-      path: LocalPath
-    ) => Promise<{ content: string; lastModified: number } | undefined>
-  ) {}
-
-  async run() {
-    this.#api = await Loader.import<CardAPI>(`${baseRealm.url}card-api`);
-    await this.visitDirectory(new URL(this.realm.url));
-    await this.semanticPhase();
+class CurrentRun {
+  static empty() {
+    return new this(new URLMap(), new URLMap(), new Map(), undefined);
   }
 
-  private get api(): CardAPI {
-    if (!this.#api) {
-      throw new Error(`Card API was accessed before it was loaded`);
+  static async fromScratch() {
+    let current = new this(new URLMap(), new URLMap(), new Map(), undefined);
+    await current.run();
+    return current;
+  }
+
+  static async incremental(
+    url: URL,
+    operation: "update" | "delete",
+    prev: CurrentRun
+  ) {
+    let nextInstances = new URLMap(prev.instances);
+    maybeRemoveInstance(nextInstances, url);
+    let nextModules = new URLMap(prev.modules);
+    nextModules.remove(url);
+    let nextDefinitions = new Map(prev.definitions);
+    removeCardsThatAreInURL(url, nextDefinitions);
+    let current = new this(nextInstances, nextModules, nextDefintions, {
+      url,
+      operation,
+    });
+    await current.run();
+    return current;
+  }
+
+  #touched = new Set<unknown>();
+
+  private async run() {
+    if (this.incremental) {
+      if (this.incremental.operation === "delete") {
+        this.#touched.add(this.incremental.url);
+      } else {
+        await this.visitFile(this.incremental.url);
+      }
+    } else {
+      await this.visitDirectory(new URL(this.realm.url));
     }
-    return this.#api;
+    await this.handleInvalidations();
   }
+
+  private constructor(
+    // idea is that we always trust these caches, anything that's not up to date is not in here
+    readonly instances: URLMap<SearchEntry>,
+    readonly modules: URLMap<ModuleSyntax>,
+    readonly definitions: Map<string, CardDefinition>,
+
+    private incremental:
+      | { url: URL; operation: "update" | "delete" }
+      | undefined
+  ) {}
 
   private async visitDirectory(url: URL): Promise<void> {
     let ignorePatterns = await this.readFileAsText(
@@ -267,12 +287,14 @@ export class SearchIndex {
     }
   }
 
-  async update(url: URL, opts?: { delete?: true }): Promise<void> {
-    await this.visitFile(url, opts);
-    await this.semanticPhase();
-  }
-
-  private async visitFile(url: URL, opts?: { delete?: true }): Promise<void> {
+  // this should recurse all the way into buildDefinition (which should become
+  // more like "typeOf") as needed
+  //
+  // typeOf should recurse into visitFile as needed when we don't already have a
+  // thing in this.modules.
+  //
+  // the trustworthy caches are what prevent this from duplicating work
+  private async visitFile(url: URL): Promise<void> {
     if (this.isIgnored(url)) {
       return;
     }
@@ -311,19 +333,56 @@ export class SearchIndex {
       hasExecutableExtension(url.href) &&
       url.href !== `${baseRealm.url}card-api.gts` // the base card's module is not analyzable
     ) {
-      if (opts?.delete) {
-        if (this.modules.get(url)) {
-          this.modules.remove(url);
-        }
-        if (this.modules.get(trimExecutableExtension(url))) {
-          this.modules.remove(trimExecutableExtension(url));
-        }
-      } else {
-        let mod = new ModuleSyntax(content);
-        this.modules.set(url, mod);
-        this.modules.set(trimExecutableExtension(url), mod);
-      }
+      let mod = new ModuleSyntax(content);
+      this.modules.set(url, mod);
+      this.modules.set(trimExecutableExtension(url), mod);
     }
+  }
+}
+
+export class SearchIndex {
+  #current = CurrentRun.empty();
+  private modules = new URLMap<ModuleSyntax>();
+  private definitions = new Map<string, CardDefinition>();
+  private exportedCardRefs = new Map<string, Map<string, ExportedCardRef>>();
+  private ignoreMap = new URLMap<Ignore>();
+  #api: CardAPI | undefined;
+  #externalDefinitionsCache = new Map<
+    string,
+    Promise<CardDefinition | undefined>
+  >();
+
+  constructor(
+    private realm: Realm,
+    private realmPaths: RealmPaths,
+    private readdir: (
+      path: string
+    ) => AsyncGenerator<{ name: string; path: string; kind: Kind }, void>,
+    private readFileAsText: (
+      path: LocalPath
+    ) => Promise<{ content: string; lastModified: number } | undefined>
+  ) {}
+
+  async run() {
+    this.#api = await Loader.import<CardAPI>(`${baseRealm.url}card-api`);
+    this.#current = await CurrentRun.fromScratch();
+  }
+
+  private get api(): CardAPI {
+    if (!this.#api) {
+      throw new Error(`Card API was accessed before it was loaded`);
+    }
+    return this.#api;
+  }
+
+  async update(url: URL, opts?: { delete?: true }): Promise<void> {
+    let nextModules = new URLMap(this.modules);
+    nextModules.remove(url);
+    let nextDefinitions = new Map(this.definitions);
+    removeCardsThatAreInURL(url, nextDefinitions);
+    new CurrentRun(nextModules, nextDefinitions);
+    await this.visitFile(url, opts);
+    await this.semanticPhase();
   }
 
   private async semanticPhase(): Promise<void> {
@@ -554,7 +613,7 @@ export class SearchIndex {
       name: "Card",
     });
 
-    return [...this.instances.values()]
+    return [...this.#current.instances.values()]
       .filter(matcher)
       .sort(this.buildSorter(query.sort))
       .map((entry) => entry.resource);
