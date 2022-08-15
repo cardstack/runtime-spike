@@ -255,13 +255,15 @@ class CurrentRun {
     operation: "update" | "delete",
     prev: CurrentRun
   ) {
+    let nextDefinitions = new Map(prev.definitions);
+    let defURLsRemoved = removeCardsInURL(url, nextDefinitions);
     let nextInstances = new URLMap(prev.instances);
     nextInstances.remove(url);
-    await maybeRemoveInstances(url, nextInstances);
+    for (let defUrl of defURLsRemoved) {
+      maybeRemoveInstances(defUrl, nextInstances);
+    }
     let nextModules = new URLMap(prev.modules);
     maybeRemoveModules(url, nextModules);
-    let nextDefinitions = new Map(prev.definitions);
-    removeCardsInURL(url, nextDefinitions);
     let current = new this({
       realm: prev.realm,
       reader: prev.reader,
@@ -644,24 +646,38 @@ class CurrentRun {
   }
 }
 
-function removeCardsInURL(url: URL, definition: Map<string, CardDefinition>) {
-  for (let key of definition.keys()) {
-    if (key.startsWith(url.href)) {
-      definition.delete(key);
+function removeCardsInURL(
+  url: URL,
+  definitions: Map<string, CardDefinition>,
+  removed: Set<string> = new Set([url.href])
+): URL[] {
+  for (let [defURL, def] of definitions) {
+    if (defURL.startsWith(url.href)) {
+      definitions.delete(defURL);
+    }
+    // remove all descendant classes
+    let superModule = def.super && getExportedCardContext(def.super).module;
+    if (superModule === url.href) {
+      removed = new Set(
+        ...removed,
+        ...removeCardsInURL(
+          new URL(superModule),
+          definitions,
+          new Set([...removed, superModule])
+        )
+      );
     }
   }
+  return [...removed].map((href) => new URL(href));
 }
 
-async function maybeRemoveInstances(url: URL, instances: URLMap<SearchEntry>) {
+function maybeRemoveInstances(url: URL, instances: URLMap<SearchEntry>) {
   instances.remove(url);
   for (let [key, instance] of instances) {
     if (instance.resource.meta.adoptsFrom.module === url.href) {
       instances.remove(key);
     }
   }
-
-  // TODO also remove instances that point to a URL that is downstream in the
-  // adoption chain in their adoptsFrom.module. This may require async
 }
 
 function maybeRemoveModules(url: URL, modules: URLMap<ModuleSyntax>) {
