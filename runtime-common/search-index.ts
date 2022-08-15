@@ -257,6 +257,7 @@ class CurrentRun {
   ) {
     let nextInstances = new URLMap(prev.instances);
     nextInstances.remove(url);
+    await maybeRemoveInstances(url, nextInstances);
     let nextModules = new URLMap(prev.modules);
     maybeRemoveModules(url, nextModules);
     let nextDefinitions = new Map(prev.definitions);
@@ -649,6 +650,18 @@ function removeCardsInURL(url: URL, definition: Map<string, CardDefinition>) {
       definition.delete(key);
     }
   }
+}
+
+async function maybeRemoveInstances(url: URL, instances: URLMap<SearchEntry>) {
+  instances.remove(url);
+  for (let [key, instance] of instances) {
+    if (instance.resource.meta.adoptsFrom.module === url.href) {
+      instances.remove(key);
+    }
+  }
+
+  // TODO also remove instances that point to a URL that is downstream in the
+  // adoption chain in their adoptsFrom.module. This may require async
 }
 
 function maybeRemoveModules(url: URL, modules: URLMap<ModuleSyntax>) {
