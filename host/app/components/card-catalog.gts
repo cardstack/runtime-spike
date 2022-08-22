@@ -3,8 +3,7 @@ import { getSearchResults } from '../resources/search';
 import type { ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
-import CardEditor from './card-editor';
-import ImportModule from './import-module';
+import ImportedModuleEditor from './imported-module-editor';
 import { LinkTo } from '@ember/routing';
 import { service } from '@ember/service';
 import LocalRealm from '../services/local-realm';
@@ -22,29 +21,21 @@ interface Signature {
   }
 }
 
-export default class CardCatalogEditor extends Component<Signature> {
+export default class CardCatalog extends Component<Signature> {
   <template>
     <ul>
-      {{#each this.catalogEntry.instances as |entry|}}
+      {{#if this.entry}}
         <li>
-          <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension entry.id))}}>
-            {{entry.id}}
+          <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension this.entry.id))}}>
+            {{this.entry.id}}
           </LinkTo>
           <fieldset>
             <legend>Catalog Entry Editor</legend>
-            <ImportModule @url={{entry.meta.adoptsFrom.module}}>
-              <:ready as |module|>
-                <CardEditor
-                  @card={{hash type="existing" url=entry.id json=(hash data=entry) format="edit"}}
-                  @module={{module}}
-                  @onSave={{this.onSave}}
-                />
-              </:ready>
-              <:error as |error|>
-                <h2>Encountered {{error.type}} error</h2>
-                <pre>{{error.message}}</pre>
-              </:error>
-            </ImportModule>
+            <ImportedModuleEditor
+              @moduleURL={{this.entry.meta.adoptsFrom.module}}
+              @cardArgs={{hash type="existing" url=this.entry.id json=(hash data=this.entry) format="edit"}}
+              @onSave={{this.onSave}}
+            />
           </fieldset>
           {{!-- TODO: Catalog Entry Preview --}}
         </li>
@@ -52,27 +43,19 @@ export default class CardCatalogEditor extends Component<Signature> {
         {{#if this.showEditor}}
           <fieldset>
             <legend>Publish New Card Type</legend>
-            <ImportModule @url={{this.catalogEntryRef.module}}>
-              <:ready as |module|>
-                <CardEditor
-                  @card={{hash type="new" realmURL=this.localRealm.url.href cardSource=this.catalogEntryRef initialAttributes=this.catalogEntryAttributes}}
-                  @module={{module}}
-                  @onSave={{this.onSave}}
-                  @onCancel={{this.onCancel}}
-                />
-              </:ready>
-              <:error as |error|>
-                <h2>Encountered {{error.type}} error</h2>
-                <pre>{{error.message}}</pre>
-              </:error>
-            </ImportModule>
+            <ImportedModuleEditor
+              @moduleURL={{this.catalogEntryRef.module}}
+              @cardArgs={{hash type="new" realmURL=this.localRealm.url.href cardSource=this.catalogEntryRef initialAttributes=this.catalogEntryAttributes}}
+              @onSave={{this.onSave}}
+              @onCancel={{this.onCancel}}
+            />
           </fieldset>
         {{else}}
           <button {{on "click" this.displayEditor}} type="button">
             Publish Card Type
           </button>
         {{/if}}
-      {{/each}}
+      {{/if}}
     </ul>
   </template>
 
@@ -101,6 +84,10 @@ export default class CardCatalogEditor extends Component<Signature> {
       throw new Error('Local realm is not available');
     }
     return new RealmPaths(Loader.reverseResolution(this.localRealm.url.href));
+  }
+
+  get entry() {
+    return this.catalogEntry.instances[0];
   }
 
   @action
