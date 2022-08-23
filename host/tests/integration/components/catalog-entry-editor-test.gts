@@ -46,10 +46,10 @@ module('Integration | catalog-entry-editor', function (hooks) {
     Loader.disableNativeImport(true);
 
     // We have a bit of a chicken and egg problem here in that in order for us
-    // to short circuit the fetch we need a Realm instance, however, we can't 
+    // to short circuit the fetch we need a Realm instance, however, we can't
     // create a realm instance without first doing a full index which will load
     //  cards for any instances it find which results in a fetch. so we create
-    // an empty index, and then just use realm.write() to incrementally add 
+    // an empty index, and then just use realm.write() to incrementally add
     // items into our index.
     adapter = new TestRealmAdapter({});
 
@@ -90,7 +90,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     //       lastName: 'Abdel-Rahman'
     //     },
     //     meta: {
-    //       adoptsFrom: { 
+    //       adoptsFrom: {
     //         module:`${testRealmURL}person`,
     //         name: 'Person'
     //       }

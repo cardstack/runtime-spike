@@ -198,7 +198,10 @@ export class Loader {
     } else {
       for (let realm of this.realmFetchOverride) {
         if (realm.paths.inRealm(new URL(urlOrRequest))) {
-          let request = new Request(urlOrRequest, init);
+          let request = new Request(
+            typeof urlOrRequest === "string" ? urlOrRequest : urlOrRequest.href,
+            init
+          );
           return await realm.handle(request);
         }
       }
@@ -241,6 +244,7 @@ export class Loader {
       state: "fetching",
       deferred: new Deferred(),
     };
+    console.log(`fetching module: ${moduleIdentifier}`);
     this.modules.set(moduleIdentifier, module);
 
     let src: string;
@@ -292,9 +296,13 @@ export class Loader {
     }
 
     await Promise.all(
-      dependencyList!.map((depId) => {
+      dependencyList!.map(async (depId) => {
         if (depId !== "exports" && depId !== "__import_meta__") {
-          return this.fetchModule(new URL(depId) as ResolvedURL);
+          await this.fetchModule(new URL(depId) as ResolvedURL);
+          let module = this.modules.get(depId);
+          if (module?.state === "fetching") {
+            await module.deferred.promise;
+          }
         }
         return undefined;
       })
@@ -306,12 +314,14 @@ export class Loader {
       implementation: implementation!,
     };
 
+    console.log(`module set to registered state: ${moduleIdentifier}`);
     this.modules.set(moduleIdentifier, registeredModule);
     module.deferred.fulfill();
     return registeredModule;
   }
 
   private evaluateModule<T extends object>(moduleIdentifier: string): T {
+    console.log(`evaluating module: ${moduleIdentifier}`);
     let module = this.modules.get(moduleIdentifier);
     if (!module) {
       throw new Error(
