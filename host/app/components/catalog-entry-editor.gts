@@ -21,24 +21,22 @@ interface Signature {
   }
 }
 
-export default class CardCatalog extends Component<Signature> {
+export default class CatalogEntryEditor extends Component<Signature> {
   <template>
-    <ul>
+    <div data-test-catalog-entry-editor>
       {{#if this.entry}}
-        <li>
-          <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension this.entry.id))}}>
-            {{this.entry.id}}
-          </LinkTo>
-          <fieldset>
-            <legend>Catalog Entry Editor</legend>
-            <ImportedModuleEditor
-              @moduleURL={{this.entry.meta.adoptsFrom.module}}
-              @cardArgs={{hash type="existing" url=this.entry.id json=(hash data=this.entry) format="edit"}}
-              @onSave={{this.onSave}}
-            />
-          </fieldset>
-          {{!-- TODO: Catalog Entry Preview --}}
-        </li>
+        <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension this.entry.id))}}>
+          {{this.entry.id}}
+        </LinkTo>
+        <fieldset>
+          <legend>Catalog Entry Editor</legend>
+          <ImportedModuleEditor
+            @moduleURL={{this.entry.meta.adoptsFrom.module}}
+            @cardArgs={{hash type="existing" url=this.entry.id json=(hash data=this.entry) format="edit"}}
+            @onSave={{this.onSave}}
+          />
+        </fieldset>
+        {{!-- TODO: Catalog Entry Preview --}}
       {{else}}
         {{#if this.showEditor}}
           <fieldset>
@@ -51,12 +49,12 @@ export default class CardCatalog extends Component<Signature> {
             />
           </fieldset>
         {{else}}
-          <button {{on "click" this.displayEditor}} type="button">
+          <button {{on "click" this.displayEditor}} type="button" data-test-catalog-entry-publish>
             Publish Card Type
           </button>
         {{/if}}
       {{/if}}
-    </ul>
+    </div>
   </template>
 
   @service declare localRealm: LocalRealm;
@@ -67,7 +65,7 @@ export default class CardCatalog extends Component<Signature> {
   };
   catalogEntryAttributes = {
     title: this.args.ref.name,
-    description: `Catalog entry for ${this.args.ref.name} type`,
+    description: `Catalog entry for ${this.args.ref.name} card`,
     ref: this.args.ref,
   }
   catalogEntry = getSearchResults(this, () => ({
