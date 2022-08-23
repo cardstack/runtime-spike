@@ -1,7 +1,6 @@
-
 import { module, test } from 'qunit';
 import GlimmerComponent from '@glimmer/component';
-import { CardRef, baseRealm } from '@cardstack/runtime-common';
+import { baseRealm, ExportedCardRef } from '@cardstack/runtime-common';
 import { Loader } from "@cardstack/runtime-common/loader";
 import { Realm } from "@cardstack/runtime-common/realm";
 import { Deferred } from "@cardstack/runtime-common/deferred";
@@ -80,23 +79,6 @@ module('Integration | catalog-entry-editor', function (hooks) {
         static demo: Record<string, any> = { firstName: 'Mango' }
       }
     `);
-    // Just an example of creating a card instance
-    // await realm.write('person1.json', JSON.stringify({
-    //   data: {
-    //     id: undefined,
-    //     type: 'card',
-    //     attributes: {
-    //       firstName: 'Mango',
-    //       lastName: 'Abdel-Rahman'
-    //     },
-    //     meta: {
-    //       adoptsFrom: {
-    //         module:`${testRealmURL}person`,
-    //         name: 'Person'
-    //       }
-    //     }
-    //   }
-    // }))
 
     this.owner.register('service:local-realm', MockLocalRealm);
     this.owner.register('service:router', MockRouter);
@@ -110,7 +92,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     let router = this.owner.lookup('service:router') as MockRouter;
     let deferred = new Deferred<void>();
     router.initialize(assert, { queryParams: { path: 'CatalogEntry/1.json'}}, deferred);
-    const args: CardRef =  { type: 'exportedCard', module: `${testRealmURL}person`, name: 'Person' };
+    const args: ExportedCardRef =  { module: `${testRealmURL}person`, name: 'Person' };
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
@@ -150,8 +132,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
             description: 'test description',
             ref: {
               module: `${testRealmURL}person`,
-              name: 'Person',
-              type: 'exportedCard'
+              name: 'Person'
             }
           },
           meta: {
@@ -166,4 +147,54 @@ module('Integration | catalog-entry-editor', function (hooks) {
     );
   });
 
+  test('can edit existing catalog entry', async function (assert) {
+    await realm.write('person-catalog-entry.json', JSON.stringify({
+      data: {
+        type: 'card',
+        attributes: {
+          title: 'Person',
+          description: 'Catalog entry',
+          ref: {
+            module: `${testRealmURL}person`,
+            name: 'Person'
+          }
+        },
+        meta: {
+          adoptsFrom: {
+            module:`${baseRealm.url}catalog-entry`,
+            name: 'CatalogEntry'
+          }
+        }
+      }
+    }));
+
+    const args: ExportedCardRef =  { module: `${testRealmURL}person`, name: 'Person' };
+    await renderComponent(
+      class TestDriver extends GlimmerComponent {
+        <template>
+          <CatalogEntryEditor @ref={{args}} />
+        </template>
+      }
+    );
+
+    await waitUntil(() => Boolean(document.querySelector('[data-test-ref]')));
+
+    assert.dom('[data-test-catalog-entry-id]').hasText(`${testRealmURL}person-catalog-entry`);
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Person');
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Catalog entry');
+    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText(`Module: ${testRealmURL}person Name: Person`);
+
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="title"] input', 'Test title');
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="description"] input', 'Test entry');
+
+    await click('button[data-test-save-card');
+
+    assert.dom('button[data-test-save-card').doesNotExist();
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Test title');
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Test entry');
+
+    let entry = await realm.searchIndex.card(new URL(`${testRealmURL}person-catalog-entry`));
+    assert.strictEqual(entry?.attributes?.title, 'Test title', 'catalog entry title was updated');
+    assert.strictEqual(entry?.attributes?.description, 'Test entry', 'catalog entry description was updated');
+  });
 });

@@ -25,15 +25,14 @@ export default class CatalogEntryEditor extends Component<Signature> {
   <template>
     <div data-test-catalog-entry-editor>
       {{#if this.entry}}
-        <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension this.entry.id))}}>
+        <LinkTo @route="application" @query={{hash path=(this.modulePath (ensureJsonExtension this.entry.id))}} data-test-catalog-entry-id>
           {{this.entry.id}}
         </LinkTo>
         <fieldset>
           <legend>Catalog Entry Editor</legend>
           <ImportedModuleEditor
             @moduleURL={{this.entry.meta.adoptsFrom.module}}
-            @cardArgs={{hash type="existing" url=this.entry.id json=(hash data=this.entry) format="edit"}}
-            @onSave={{this.onSave}}
+            @cardArgs={{hash type="existing" url=this.entry.id format="edit"}}
           />
         </fieldset>
         {{!-- TODO: Catalog Entry Preview --}}
