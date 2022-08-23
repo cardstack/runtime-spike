@@ -23,12 +23,6 @@ export interface Dir {
 
 export const testRealmURL = 'http://test-realm/test/';
 
-// This is the locally served base realm
-Loader.addURLMapping(
-  new URL(baseRealm.url),
-  new URL('http://localhost:4201/base/')
-);
-
 export const TestRealm = {
   create(flatFiles: Record<string, string | object>, realmURL?: string): Realm {
     return new Realm(realmURL ?? testRealmURL, new TestRealmAdapter(flatFiles));
