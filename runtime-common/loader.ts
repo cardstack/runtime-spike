@@ -294,6 +294,16 @@ export class Loader {
       throw exception;
     }
 
+    // note that after this promise all, the dep modules here are not
+    // necessarily at a registered state--you may actually have a dep that was
+    // already in the process of fetching when you asked to fetch it again, in
+    // which case you just get back a module in a fetching state with a deferred
+    // that is not yet fulfilled. This means that the module may think that it
+    // and all its deps are ready for evaluation, when in fact there is actually
+    // still work being done by sibling fetch that happened to ask for the same
+    // dep earlier. And there is no guarantee that that the sibling fetch will
+    // have completed the register in time for the evaluation that this fetch
+    // thinks its ready for.
     await Promise.all(
       dependencyList!.map(async (depId) => {
         if (depId !== "exports" && depId !== "__import_meta__") {
@@ -322,13 +332,13 @@ export class Loader {
     let module = this.modules.get(moduleIdentifier);
     if (!module) {
       throw new Error(
-        `bug in module loader. ${moduleIdentifier} should have been registered before entering evaluateModule`
+        `bug in module loader: can't find module. ${moduleIdentifier} should have been registered before entering evaluateModule`
       );
     }
     switch (module.state) {
       case "fetching":
         throw new Error(
-          `bug in module loader. ${moduleIdentifier} should have been registered before entering evaluateModule`
+          `bug in module loader: module still in fetching state. ${moduleIdentifier} should have been registered before entering evaluateModule`
         );
       case "preparing":
       case "evaluated":
