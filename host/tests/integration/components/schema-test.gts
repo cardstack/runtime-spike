@@ -36,13 +36,6 @@ module('Integration | schema', function (hooks) {
     assert.dom('[data-test-card-id]').hasText(`Card ID: ${testRealmURL}person/Person`);
     assert.dom('[data-test-adopts-from').hasText('Adopts From: https://cardstack.com/base/card-api/Card');
     assert.dom('[data-test-field="firstName"]').hasText('firstName - contains - field card ID: https://cardstack.com/base/string/default');
-
-    await click('[data-test-catalog-entry-publish]');
-    await waitUntil(() => Boolean(document.querySelector('[data-test-ref]')));
-
-    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Person');
-    assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Catalog entry for Person card');
-    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText('Module: http://localhost:4201/test/person Name: Person');
   });
 
   test('renders link to field card for contained field', async function(assert) {
