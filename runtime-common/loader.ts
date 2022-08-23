@@ -244,7 +244,6 @@ export class Loader {
       state: "fetching",
       deferred: new Deferred(),
     };
-    console.log(`fetching module: ${moduleIdentifier}`);
     this.modules.set(moduleIdentifier, module);
 
     let src: string;
@@ -314,14 +313,12 @@ export class Loader {
       implementation: implementation!,
     };
 
-    console.log(`module set to registered state: ${moduleIdentifier}`);
     this.modules.set(moduleIdentifier, registeredModule);
     module.deferred.fulfill();
     return registeredModule;
   }
 
   private evaluateModule<T extends object>(moduleIdentifier: string): T {
-    console.log(`evaluating module: ${moduleIdentifier}`);
     let module = this.modules.get(moduleIdentifier);
     if (!module) {
       throw new Error(
