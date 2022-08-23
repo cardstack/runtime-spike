@@ -132,8 +132,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
             description: 'test description',
             ref: {
               module: `${testRealmURL}person`,
-              name: 'Person',
-              type: 'exportedCard'
+              name: 'Person'
             }
           },
           meta: {
