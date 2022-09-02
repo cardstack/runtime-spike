@@ -133,7 +133,8 @@ module('Integration | catalog-entry-editor', function (hooks) {
             ref: {
               module: `${testRealmURL}person`,
               name: 'Person'
-            }
+            },
+            demo: {}
           },
           meta: {
             adoptsFrom: {

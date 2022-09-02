@@ -3,6 +3,36 @@ import StringCard from 'https://cardstack.com/base/string';
 import BooleanCard from 'https://cardstack.com/base/boolean';
 import CardRefCard from 'https://cardstack.com/base/card-ref';
 import { Loader } from "@cardstack/runtime-common";
+import { on } from '@ember/modifier';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import type RouterService from '@ember/routing/router-service';
+
+class EditView extends Component<typeof CatalogEntry> {
+  <template>
+    <div class="card-edit">
+      <label data-test-field="title">Title
+        <@fields.title/>
+      </label>
+      <label data-test-field="description">Description
+        <@fields.description/>
+      </label>
+    </div>
+    <label data-test-field="ref">Ref
+      <@fields.ref/>
+    </label>
+    <div>
+      Demo: <@fields.demo/>
+      <button {{on "click" this.transitionToCatalog}}>Choose Card</button>
+    </div>
+  </template>
+
+  @service declare router: RouterService;  
+  @action
+  transitionToCatalog() {
+    this.router.transitionTo({ queryParams: { showCatalog: true } });
+  }
+}
 
 export class CatalogEntry extends Card {
   @field title = contains(StringCard);
@@ -13,25 +43,12 @@ export class CatalogEntry extends Card {
     let Clazz: typeof Card = module[this.ref.name];
     return primitive in Clazz;
   }});
+  @field demo = contains(Card);
 
   // An explicit edit template is provided since computed isPrimitive bool
   // field (which renders in the embedded format) looks a little wonky
   // right now in the edit view.
-  static edit = class Edit extends Component<typeof this> {
-    <template>
-      <div class="card-edit">
-        <label data-test-field="title">Title
-          <@fields.title/>
-        </label>
-        <label data-test-field="description">Description
-          <@fields.description/>
-        </label>
-        <label data-test-field="ref">Ref
-          <@fields.ref/>
-        </label>
-      </div>
-    </template>
-  }
+  static edit = EditView;
 
   static embedded = class Embedded extends Component<typeof this> {
     <template>
@@ -39,6 +56,7 @@ export class CatalogEntry extends Card {
       <div><@fields.description/></div>
       <div><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
+      <div><@fields.demo/></div>
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {
@@ -47,6 +65,7 @@ export class CatalogEntry extends Card {
       <div data-test-description><@fields.description/></div>
       <div data-test-ref><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
+      <div><@fields.demo/></div>
     </template>
   }
 }
