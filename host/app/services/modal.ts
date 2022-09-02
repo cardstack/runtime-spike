@@ -2,26 +2,18 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
-type State =
-  | {
-      name: 'empty';
-    }
-  | {
-      name: 'loaded';
-    };
-
 export default class Modal extends Service {
-  @tracked state: State = { name: 'empty' };
+  @tracked state: 'open' | 'closed' = 'closed';
 
   get isShowing(): boolean {
-    return this.state.name === 'loaded';
+    return this.state === 'open';
   }
 
   @action open(): void {
-    this.state = { name: 'loaded' };
+    this.state = 'open';
   }
 
   @action close(): void {
-    this.state = { name: 'empty' };
+    this.state = 'closed';
   }
 }

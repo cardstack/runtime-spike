@@ -47,6 +47,10 @@ export class Search extends Resource<Args> {
     let json = await response.json();
     this.instances = (json.data as CardResource[]) ?? [];
   }
+
+  get isLoading() {
+    return taskFor(this.search).isRunning;
+  }
 }
 
 export function getSearchResults(

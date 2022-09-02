@@ -18,7 +18,7 @@ export default class Application extends Route<Model> {
       refreshModel: true,
     },
     showCatalog: {
-      replace: true,
+      refreshModel: true,
     },
   };
 
@@ -33,7 +33,7 @@ export default class Application extends Route<Model> {
     let { path, showCatalog } = args;
     if (showCatalog === 'true') {
       this.modal.open();
-    } else if (this.modal.isShowing) {
+    } else {
       this.modal.close();
     }
 

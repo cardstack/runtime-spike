@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { type CardResource, catalogEntryRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
+import { eq } from '../helpers/truth-helpers'
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
 
@@ -17,23 +18,29 @@ interface Signature {
 
 export default class CardCatalog extends Component<Signature> {
   <template>
-    <ul class="card-catalog" data-test-card-catalog>
-      {{#each this.entries as |entry|}}
-        <li data-test-card-catalog-item={{entry.id}}>
-          <CardEditor
-            @moduleURL={{entry.meta.adoptsFrom.module}}
-            @cardArgs={{hash type="existing" url=entry.id format="embedded"}}
-          />
-          {{#if @onSelect}}
-            <button {{on "click" (fn @onSelect entry)}} type="button" data-test-select={{entry.id}}>
-              Select
-            </button>
-          {{/if}}
-        </li>
+    <div data-test-card-catalog>
+      {{#if (eq this.state "loading")}}
+        Loading...
+      {{else if (eq this.state "loaded")}}
+        <ul class="card-catalog">
+          {{#each this.entries as |entry|}}
+            <li data-test-card-catalog-item={{entry.id}}>
+              <CardEditor
+                @moduleURL={{entry.meta.adoptsFrom.module}}
+                @cardArgs={{hash type="existing" url=entry.id format="embedded"}}
+              />
+              {{#if @onSelect}}
+                <button {{on "click" (fn @onSelect entry)}} type="button" data-test-select={{entry.id}}>
+                  Select
+                </button>
+              {{/if}}
+            </li>
+          {{/each}}
+        </ul>
       {{else}}
-        None
-      {{/each}}
-    </ul>
+        No cards available
+      {{/if}}
+    </div>
   </template>
 
   catalogEntry = getSearchResults(this,
@@ -43,5 +50,15 @@ export default class CardCatalog extends Component<Signature> {
 
   get entries() {
     return this.catalogEntry.instances;
+  }
+
+  get state() {
+    if (this.catalogEntry.isLoading) {
+      return 'loading';
+    } else if (this.entries.length > 0) {
+      return 'loaded';
+    } else {
+      return 'empty';
+    }
   }
 }
