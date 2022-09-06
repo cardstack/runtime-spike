@@ -1,0 +1,17 @@
+{
+  "data": {
+    "type": "card",
+    "attributes": {
+      "favoriteColor": "Blue",
+      "firstName": "Woody",
+      "isCool": false,
+      "isHuman": false
+    },
+    "meta": {
+      "adoptsFrom": {
+        "module": "http://local-realm/fancy-person",
+        "name": "FancyPerson"
+      }
+    }
+  }
+}

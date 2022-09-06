@@ -10,9 +10,12 @@ import type RouterService from '@ember/routing/router-service';
 import { cached } from '@glimmer/tracking';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
+import { fn } from '@ember/helper';
+import qs from 'qs';
 
 import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
+import ModalService from '../services/modal';
 import CardEditor from './card-editor';
 
 interface Signature {
@@ -34,6 +37,9 @@ export default class CatalogEntryEditor extends Component<Signature> {
             @moduleURL={{this.entry.meta.adoptsFrom.module}}
             @cardArgs={{hash type="existing" url=this.entry.id format="edit"}}
           />
+          <button {{on "click" (fn this.openCatalog this.entry.attributes.ref)}} type="button">
+            Open Catalog
+          </button>
         </fieldset>
       {{else}}
         {{#if this.showEditor}}
@@ -57,6 +63,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
 
   @service declare localRealm: LocalRealm;
   @service declare router: RouterService;
+  @service declare modal: ModalService;
   catalogEntryRef = catalogEntryRef;
   catalogEntryAttributes = {
     title: this.args.ref.name,
@@ -102,6 +109,11 @@ export default class CatalogEntryEditor extends Component<Signature> {
   onSave(url: string) {
     let path = this.realmPath.local(new URL(url));
     this.router.transitionTo({ queryParams: { path } });
+  }
+
+  @action
+  openCatalog(ref: ExportedCardRef) {
+    this.router.transitionTo({ queryParams: { showCatalog: true, ref: qs.stringify(ref) }});
   }
 }
 

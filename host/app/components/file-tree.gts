@@ -1,7 +1,8 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { RealmPaths, Loader } from '@cardstack/runtime-common';
+import { RealmPaths, Loader, type ExportedCardRef } from '@cardstack/runtime-common';
 import type RouterService from '@ember/routing/router-service';
+import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import { action } from '@ember/object';
@@ -10,8 +11,9 @@ import { eq } from '../helpers/truth-helpers'
 import { cached } from '@glimmer/tracking';
 
 import LocalRealm from '../services/local-realm';
-import ModalService from '../services/modal';
 import { directory, Entry } from '../resources/directory';
+
+import CardCatalogModal from './card-catalog-modal';
 import CreateNewCard from './create-new-card';
 
 interface Args {
@@ -39,16 +41,19 @@ export default class FileTree extends Component<Args> {
           </div>
         {{/if}}
       {{/each}}
+
       <button {{on "click" this.openCatalog}} type="button" data-test-create-new-card-button>
         Create New Card
       </button>
-      {{#if this.modal.isShowing}}
+      <CardCatalogModal @onSelect={{this.selectFromCatalog}} />
+      {{#if this.selectedRef}}
         <CreateNewCard
+          @cardRef={{this.selectedRef}}
           @realmURL={{@localRealm.url.href}}
-          @onSave={{this.onSave}}
-          @onClose={{this.closeCatalog}}
+          @onClose={{this.onCloseCreateNewCard}}
         />
       {{/if}}
+
     {{else if @localRealm.isLoading }}
       ...
     {{else if @localRealm.isEmpty}}
@@ -58,7 +63,7 @@ export default class FileTree extends Component<Args> {
 
   listing = directory(this, () => this.args.localRealm.isAvailable ? "http://local-realm/" : undefined)
   @service declare router: RouterService;
-  @service declare modal: ModalService;
+  @tracked selectedRef: ExportedCardRef | undefined;
 
   @cached
   get realmPath() {
@@ -89,19 +94,16 @@ export default class FileTree extends Component<Args> {
 
   @action
   openCatalog() {
-    this.modal.open();
     this.router.transitionTo({ queryParams: { showCatalog: true } });
   }
 
   @action
-  closeCatalog() {
-    this.modal.close();
-    this.router.transitionTo({ queryParams: { showCatalog: undefined } });
+  selectFromCatalog(ref: ExportedCardRef) {
+    this.selectedRef = ref;
   }
 
   @action
-  onSave(url: string) {
-    let path = this.realmPath.local(new URL(url));
-    this.router.transitionTo({ queryParams: { path, showCatalog: undefined } });
+  onCloseCreateNewCard() {
+    this.selectedRef = undefined;
   }
 }

@@ -5,8 +5,12 @@ import { file, FileResource } from '../resources/file';
 import type RouterService from '@ember/routing/router-service';
 import LocalRealm from '../services/local-realm';
 import ModalService from '../services/modal';
-import { RealmPaths } from '@cardstack/runtime-common/paths';
-import { Loader } from '@cardstack/runtime-common/loader';
+import {
+  RealmPaths,
+  Loader,
+  type ExportedCardRef,
+} from '@cardstack/runtime-common';
+import qs from 'qs';
 
 interface Model {
   path: string | undefined;
@@ -20,6 +24,9 @@ export default class Application extends Route<Model> {
     showCatalog: {
       refreshModel: true,
     },
+    ref: {
+      refreshModel: true,
+    },
   };
 
   @service declare router: RouterService;
@@ -28,10 +35,15 @@ export default class Application extends Route<Model> {
 
   async model(args: {
     path: string | undefined;
-    showCatalog: 'true' | undefined;
+    showCatalog: boolean | undefined;
+    ref: string | undefined;
+    createNew: boolean | undefined;
   }): Promise<Model> {
-    let { path, showCatalog } = args;
-    if (showCatalog === 'true') {
+    let { path, showCatalog, ref } = args;
+    if (showCatalog && ref) {
+      let cardRef = qs.parse(ref) as ExportedCardRef;
+      this.modal.open(cardRef);
+    } else if (showCatalog) {
       this.modal.open();
     } else {
       this.modal.close();
