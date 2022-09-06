@@ -76,7 +76,7 @@ export const isNode =
  */
 
 export const externalsMap: Map<string, string[]> = new Map([
-  ["@cardstack/runtime-common", ["Loader"]],
+  ["@cardstack/runtime-common", ["Loader", "openCatalog"]],
   ["@glimmer/component", ["default"]],
   ["@ember/component", ["setComponentTemplate", "default"]],
   ["@ember/component/template-only", ["default"]],
@@ -142,3 +142,9 @@ export type {
   CardDefinition,
 } from "./search-index";
 export { isCardResource, isCardDocument } from "./search-index";
+
+// Starting to sketch out possible API for open catalog
+export function openCatalog(ref: ExportedCardRef) {
+  console.log("open catalog called for type:", ref);
+  // TODO
+}

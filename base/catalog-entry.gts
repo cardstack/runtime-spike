@@ -2,11 +2,9 @@ import { contains, field, Component, Card, primitive } from 'https://cardstack.c
 import StringCard from 'https://cardstack.com/base/string';
 import BooleanCard from 'https://cardstack.com/base/boolean';
 import CardRefCard from 'https://cardstack.com/base/card-ref';
-import { Loader } from "@cardstack/runtime-common";
+import { Loader, openCatalog } from "@cardstack/runtime-common";
 import { on } from '@ember/modifier';
-import { action } from '@ember/object';
-import { service } from '@ember/service';
-import type RouterService from '@ember/routing/router-service';
+import { fn } from '@ember/helper';
 
 class EditView extends Component<typeof CatalogEntry> {
   <template>
@@ -23,15 +21,9 @@ class EditView extends Component<typeof CatalogEntry> {
     </label>
     <div>
       Demo: <@fields.demo/>
-      <button {{on "click" this.transitionToCatalog}}>Choose Card</button>
+      <button {{on "click" (fn openCatalog @model.ref)}}>Choose Card</button>
     </div>
   </template>
-
-  @service declare router: RouterService;  
-  @action
-  transitionToCatalog() {
-    this.router.transitionTo({ queryParams: { showCatalog: true } });
-  }
 }
 
 export class CatalogEntry extends Card {
