@@ -1,44 +1,68 @@
 import Component from '@glimmer/component';
-import type { ExportedCardRef } from '@cardstack/runtime-common';
-import { service } from '@ember/service';
-import type RouterService from '@ember/routing/router-service';
+import { type ExportedCardRef, chooseCard, catalogEntryRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 //@ts-ignore glint does not think `hash` is consumed-but it is in the template
 import { hash } from '@ember/helper';
+import { taskFor } from 'ember-concurrency-ts';
+import { restartableTask } from 'ember-concurrency';
+import type { CatalogEntry } from 'https://cardstack.com/base/catalog-entry';
 import CardEditor from './card-editor';
 
 interface Signature {
   Args: {
-    cardRef: ExportedCardRef;
     realmURL: string;
-    onClose: () => void;
+    onSave?: (url: string) => void;
   }
 }
 
 export default class CreateNewCard extends Component<Signature> {
   <template>
-    {{#if @cardRef}}
+    <button {{on "click" this.openCatalog}} type="button" data-test-create-new-card-button>
+      Create New Card
+    </button>
+    {{#if this.selectedRef}}
       <dialog class="dialog-box" open>
-        <button {{on "click" @onClose}} type="button">X Close</button>
-        <div data-test-create-new={{@cardRef.name}}>
-          <h1>Create New Card: {{@cardRef.name}}</h1>
+        <button {{on "click" this.closeEditor}} type="button">X Close</button>
+        <div data-test-create-new-card={{this.selectedRef.name}}>
+          <h1>Create New Card: {{this.selectedRef.name}}</h1>
           <CardEditor
-            @moduleURL={{@cardRef.module}}
-            @cardArgs={{hash type="new" realmURL=@realmURL cardSource=@cardRef}}
+            @moduleURL={{this.selectedRef.module}}
+            @cardArgs={{hash type="new" realmURL=@realmURL cardSource=this.selectedRef}}
             @onSave={{this.save}}
-            @onCancel={{@onClose}}
+            @onCancel={{this.closeEditor}}
           />
         </div>
       </dialog>
     {{/if}}
   </template>
 
-  @service declare router: RouterService;
+  @tracked selectedRef: ExportedCardRef | undefined;
+
+  @action
+  openCatalog() {
+    taskFor(this.chooseNewCard).perform();
+  }
+
+  @restartableTask private async chooseNewCard() {
+  let entry: CatalogEntry | undefined = await chooseCard({
+      filter: { type: catalogEntryRef }
+    });
+    if (!entry) {
+      return;
+    }
+    this.selectedRef = entry.ref;
+  }
 
   @action
   save(path: string) {
-    this.router.transitionTo({ queryParams: { path } });
-    this.args.onClose();
+    this.args.onSave?.(path);
+    this.closeEditor();
+  }
+
+  @action
+  closeEditor() {
+    this.selectedRef = undefined;
   }
 }

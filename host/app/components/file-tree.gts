@@ -1,22 +1,13 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { RealmPaths, Loader, type ExportedCardRef, chooseCard } from '@cardstack/runtime-common';
 import type RouterService from '@ember/routing/router-service';
-import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import { action } from '@ember/object';
 import { eq } from '../helpers/truth-helpers'
-//@ts-ignore cached not available yet in definitely typed
-import { cached } from '@glimmer/tracking';
-
 import LocalRealm from '../services/local-realm';
 import { directory, Entry } from '../resources/directory';
-
 import CreateNewCard from './create-new-card';
-import { taskFor } from 'ember-concurrency-ts';
-import { restartableTask } from 'ember-concurrency';
-import type { CatalogEntry } from 'https://cardstack.com/base/catalog-entry';
 
 interface Args {
   Args: {
@@ -44,17 +35,10 @@ export default class FileTree extends Component<Args> {
         {{/if}}
       {{/each}}
 
-      <button {{on "click" this.openCatalog}} type="button" data-test-create-new-card-button>
-        Create New Card
-      </button>
-      {{#if this.selectedRef}}
-        <CreateNewCard
-          @cardRef={{this.selectedRef}}
-          @realmURL={{@localRealm.url.href}}
-          @onClose={{this.onCloseCreateNewCard}}
-        />
-      {{/if}}
-
+      <CreateNewCard
+        @realmURL={{@localRealm.url.href}}
+        @onSave={{this.onSave}}
+      />
     {{else if @localRealm.isLoading }}
       ...
     {{else if @localRealm.isEmpty}}
@@ -64,15 +48,6 @@ export default class FileTree extends Component<Args> {
 
   listing = directory(this, () => this.args.localRealm.isAvailable ? "http://local-realm/" : undefined)
   @service declare router: RouterService;
-  @tracked selectedRef: ExportedCardRef | undefined;
-
-  @cached
-  get realmPath() {
-    if (!this.args.localRealm.isAvailable) {
-      throw new Error('Realm is not available');
-    }
-    return new RealmPaths(Loader.reverseResolution(this.args.localRealm.url.href));
-  }
 
   @action
   openRealm() {
@@ -83,43 +58,18 @@ export default class FileTree extends Component<Args> {
   closeRealm() {
     if (this.args.localRealm.isAvailable) {
       this.args.localRealm.close();
-      this.router.transitionTo({ queryParams: { path: undefined, showCatalog: undefined } });
+      this.router.transitionTo({ queryParams: { path: undefined } });
     }
   }
 
   @action
   open(entry: Entry) {
     let { path } = entry;
-    this.router.transitionTo({ queryParams: { path, showCatalog: undefined } });
+    this.router.transitionTo({ queryParams: { path } });
   }
 
   @action
-  openCatalog() {
-    taskFor(this.chooseNewCard).perform();
-  }
-
-  @restartableTask private async chooseNewCard() {
-   let entry: CatalogEntry | undefined = await chooseCard({ 
-      filter: {
-        type: {
-          module: "https://cardstack.com/base/catalog-entry",
-          name: "CatalogEntry",
-        }
-      }
-    });
-    if (!entry) {
-      return;
-    }
-    this.selectedRef = entry.ref;
-  }
-
-  @action
-  selectFromCatalog(ref: ExportedCardRef) {
-    this.selectedRef = ref;
-  }
-
-  @action
-  onCloseCreateNewCard() {
-    this.selectedRef = undefined;
+  onSave(path: string) {
+    this.router.transitionTo({ queryParams: { path } });
   }
 }

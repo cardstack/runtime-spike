@@ -24,14 +24,14 @@ import { enqueueTask } from 'ember-concurrency';
 export default class CardCatalogModal extends Component {
   <template>
     {{#if this.currentRequest}}
-      <dialog class="dialog-box" open data-test-card-modal>
+      <dialog class="dialog-box" open data-test-card-catalog-modal>
         <button {{on "click" (fn this.pick undefined)}} type="button">X Close</button>
         <h1>Card Catalog</h1>
         <div>
           {{#if this.currentRequest.search.isLoading}}
             Loading...
           {{else}}
-            <ul class="card-catalog">
+            <ul class="card-catalog" data-test-card-catalog>
               {{#each this.currentRequest.search.instances as |entry|}}
                 <li data-test-card-catalog-item={{entry.id}}>
                   <CardEditor
