@@ -4,13 +4,7 @@ import { action } from '@ember/object';
 import { file, FileResource } from '../resources/file';
 import type RouterService from '@ember/routing/router-service';
 import LocalRealm from '../services/local-realm';
-import ModalService from '../services/modal';
-import {
-  RealmPaths,
-  Loader,
-  type ExportedCardRef,
-} from '@cardstack/runtime-common';
-import qs from 'qs';
+import { RealmPaths, Loader } from '@cardstack/runtime-common';
 
 interface Model {
   path: string | undefined;
@@ -21,33 +15,16 @@ export default class Application extends Route<Model> {
     path: {
       refreshModel: true,
     },
-    showCatalog: {
-      refreshModel: true,
-    },
-    ref: {
-      refreshModel: true,
-    },
   };
 
   @service declare router: RouterService;
   @service declare localRealm: LocalRealm;
-  @service declare modal: ModalService;
 
   async model(args: {
     path: string | undefined;
-    showCatalog: boolean | undefined;
-    ref: string | undefined;
     createNew: boolean | undefined;
   }): Promise<Model> {
-    let { path, showCatalog, ref } = args;
-    if (showCatalog && ref) {
-      let cardRef = qs.parse(ref) as ExportedCardRef;
-      this.modal.open(cardRef);
-    } else if (showCatalog) {
-      this.modal.open();
-    } else {
-      this.modal.close();
-    }
+    let { path } = args;
 
     let openFile: FileResource | undefined;
     if (!path) {

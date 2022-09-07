@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { RealmPaths, Loader, type ExportedCardRef } from '@cardstack/runtime-common';
+import { RealmPaths, Loader, type ExportedCardRef, chooseCard } from '@cardstack/runtime-common';
 import type RouterService from '@ember/routing/router-service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
@@ -13,8 +13,10 @@ import { cached } from '@glimmer/tracking';
 import LocalRealm from '../services/local-realm';
 import { directory, Entry } from '../resources/directory';
 
-import CardCatalogModal from './card-catalog-modal';
 import CreateNewCard from './create-new-card';
+import { taskFor } from 'ember-concurrency-ts';
+import { restartableTask } from 'ember-concurrency';
+import type { CatalogEntry } from 'https://cardstack.com/base/catalog-entry';
 
 interface Args {
   Args: {
@@ -45,7 +47,6 @@ export default class FileTree extends Component<Args> {
       <button {{on "click" this.openCatalog}} type="button" data-test-create-new-card-button>
         Create New Card
       </button>
-      <CardCatalogModal @onSelect={{this.selectFromCatalog}} />
       {{#if this.selectedRef}}
         <CreateNewCard
           @cardRef={{this.selectedRef}}
@@ -94,7 +95,22 @@ export default class FileTree extends Component<Args> {
 
   @action
   openCatalog() {
-    this.router.transitionTo({ queryParams: { showCatalog: true } });
+    taskFor(this.chooseNewCard).perform();
+  }
+
+  @restartableTask private async chooseNewCard() {
+   let entry: CatalogEntry | undefined = await chooseCard({ 
+      filter: {
+        type: {
+          module: "https://cardstack.com/base/catalog-entry",
+          name: "CatalogEntry",
+        }
+      }
+    });
+    if (!entry) {
+      return;
+    }
+    this.selectedRef = entry.ref;
   }
 
   @action

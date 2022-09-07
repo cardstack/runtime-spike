@@ -1,62 +1,100 @@
 import Component from '@glimmer/component';
-import type { ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
-import { action } from '@ember/object';
 import { fn } from '@ember/helper';
-import { eq } from '../helpers/truth-helpers'
-import { service } from '@ember/service';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
-import ModalService from '../services/modal';
+
 import CardEditor from './card-editor';
 
-interface Signature {
-  Args: {
-    onSelect?: (entry: ExportedCardRef) => void;
-  }
-}
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import {
+  type CardResource,
+  Loader
+} from '@cardstack/runtime-common';
+import type { Query } from '@cardstack/runtime-common/query';
+import { Deferred } from '@cardstack/runtime-common/deferred';
 
-export default class CardCatalogModal extends Component<Signature> {
+import { getSearchResults, Search } from '../resources/search';
+import { registerDestructor } from '@ember/destroyable';
+import type { Card } from 'https://cardstack.com/base/card-api';
+import { taskFor } from 'ember-concurrency-ts';
+import { enqueueTask } from 'ember-concurrency';
+
+export default class CardCatalogModal extends Component {
   <template>
-    <dialog class="dialog-box" open={{this.modal.isShowing}} data-test-card-modal>
-      <button {{on "click" this.closeCatalog}} type="button">X Close</button>
-      <h1>Card Catalog</h1>
-      <div>
-        {{#let this.modal.state as |state|}}
-          {{#if (eq state.name "loading")}}
+    {{#if this.currentRequest}}
+      <dialog class="dialog-box" open data-test-card-modal>
+        <button {{on "click" (fn this.pick undefined)}} type="button">X Close</button>
+        <h1>Card Catalog</h1>
+        <div>
+          {{#if this.currentRequest.search.isLoading}}
             Loading...
-          {{else if (eq state.name "loaded")}}
+          {{else}}
             <ul class="card-catalog">
-              {{#each state.entries as |entry|}}
+              {{#each this.currentRequest.search.instances as |entry|}}
                 <li data-test-card-catalog-item={{entry.id}}>
                   <CardEditor
                     @moduleURL={{entry.meta.adoptsFrom.module}}
                     @cardArgs={{hash type="existing" url=entry.id format="embedded"}}
                   />
-                  <button {{on "click" (fn this.select entry.attributes.ref)}} type="button" data-test-select={{entry.id}}>
+                  <button {{on "click" (fn this.pick entry)}} type="button" data-test-select={{entry.id}}>
                     Select
                   </button>
                 </li>
+              {{else}}
+                <p>No cards available</p>
               {{/each}}
             </ul>
-          {{else}}
-            <p>No cards available</p>
           {{/if}}
-        {{/let}}
-      </div>
-    </dialog>
+        </div>
+      </dialog>
+    {{/if}}
   </template>
 
-  @service declare modal: ModalService;
+  @tracked currentRequest: {
+    search: Search;
+    deferred: Deferred<CardResource | undefined>;
+  } | undefined;
 
-  @action
-  select(ref: ExportedCardRef) {
-    this.args.onSelect?.(ref);
-    this.closeCatalog();
+  constructor(owner: unknown, args: {}) {
+    super(owner, args);
+    (globalThis as any)._CARDSTACK_CARD_CHOOSER = this;
+    registerDestructor(this, () => {
+      delete (globalThis as any)._CARDSTACK_CARD_CHOOSER;
+    });
   }
 
-  @action
-  closeCatalog() {
-    this.modal.close();
+  async chooseCard<T extends Card>(query: Query): Promise<undefined | T> {
+    return await taskFor(this._chooseCard).perform(query) as T | undefined;
   }
+
+  @enqueueTask private async _chooseCard<T extends Card>(query: Query): Promise<undefined | T> {
+    this.currentRequest = {
+      search: getSearchResults(this, () => query),
+      deferred: new Deferred(),
+    };
+    let resource = await this.currentRequest.deferred.promise;
+    if (resource) {
+      let m = await Loader.import<Record<string, typeof Card>>(resource.meta.adoptsFrom.module);
+      let Klass = m[resource.meta.adoptsFrom.name];
+      return Klass.fromSerialized(resource.attributes) as T;
+    } else {
+      return undefined;
+    }
+  }
+
+  @action pick(resource?: CardResource): void {
+    if (this.currentRequest) {
+      this.currentRequest.deferred.resolve(resource);
+      this.currentRequest = undefined;
+    }
+  }
+}
+
+
+declare module '@glint/environment-ember-loose/registry' {
+  export default interface Registry {
+    CardCatalogModal: typeof CardCatalogModal;
+   }
 }
