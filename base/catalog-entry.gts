@@ -2,9 +2,7 @@ import { contains, field, Component, Card, primitive } from 'https://cardstack.c
 import StringCard from 'https://cardstack.com/base/string';
 import BooleanCard from 'https://cardstack.com/base/boolean';
 import CardRefCard from 'https://cardstack.com/base/card-ref';
-import { Loader, chooseCard } from "@cardstack/runtime-common";
-import { on } from '@ember/modifier';
-import { fn } from '@ember/helper';
+import { Loader } from "@cardstack/runtime-common";
 
 class EditView extends Component<typeof CatalogEntry> {
   <template>
@@ -21,7 +19,6 @@ class EditView extends Component<typeof CatalogEntry> {
     </label>
     <div>
       Demo: <@fields.demo/>
-      <button {{on "click" (fn chooseCard @model.ref)}}>Choose Card</button>
     </div>
   </template>
 }
