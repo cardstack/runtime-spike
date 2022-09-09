@@ -3,6 +3,11 @@ import StringCard from 'https://cardstack.com/base/string';
 import BooleanCard from 'https://cardstack.com/base/boolean';
 import CardRefCard from 'https://cardstack.com/base/card-ref';
 import { Loader } from "@cardstack/runtime-common";
+import { ComponentLike } from '@glint/template';
+import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
+import { render } from "./render-card";
+import { taskFor } from 'ember-concurrency-ts';
 
 class EditView extends Component<typeof CatalogEntry> {
   <template>
@@ -18,9 +23,31 @@ class EditView extends Component<typeof CatalogEntry> {
       <@fields.ref/>
     </label>
     <div>
-      Demo: <@fields.demo/>
+      Demo:
+      {{#if this.rendered.component}}
+        <this.rendered.component/>
+      {{/if}}
     </div>
   </template>
+
+  @tracked component: ComponentLike<{ Args: {}; Blocks: {} }> | undefined;
+  @tracked card: Card | undefined;
+  rendered = render(this, () => this.card, () => 'edit');
+
+  constructor(owner: unknown, args: any) {
+    super(owner, args);
+    taskFor(this.loadCard).perform();
+  }
+
+  @task private async loadCard(this: EditView) {
+    if (!this.args.model) {
+      return;
+    }
+    let module: Record<string, any> = await Loader.import(this.args.model.ref.module);
+    let Clazz: typeof Card = module[this.args.model.ref.name];
+    this.card = Clazz.fromSerialized({...(Clazz as any).demo ?? {}});
+    this.args.model.demo = this.card;
+  }
 }
 
 export class CatalogEntry extends Card {
@@ -32,7 +59,12 @@ export class CatalogEntry extends Card {
     let Clazz: typeof Card = module[this.ref.name];
     return primitive in Clazz;
   }});
-  @field demo = contains(Card);
+  @field demo = contains(Card, { computeVia: async function(this: CatalogEntry) {
+    
+    let module: Record<string, any> = await Loader.import(this.ref.module);
+    let Clazz: typeof Card = module[this.ref.name];
+    return Clazz.fromSerialized({...(Clazz as any).demo ?? {}});
+  }});
 
   // An explicit edit template is provided since computed isPrimitive bool
   // field (which renders in the embedded format) looks a little wonky
