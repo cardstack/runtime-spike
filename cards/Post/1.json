@@ -16,9 +16,6 @@
         "module": "http://local-realm/post.gts",
         "name": "Post"
       }
-    },
-    "links": {
-      "self": "http://local-realm/Post/1"
     }
   }
 }

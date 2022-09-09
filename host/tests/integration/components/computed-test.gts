@@ -10,6 +10,7 @@ import { baseRealm } from '@cardstack/runtime-common';
 
 let cardApi: typeof import("https://cardstack.com/base/card-api");
 let string: typeof import ("https://cardstack.com/base/string");
+let integer: typeof import ("https://cardstack.com/base/integer");
 
 module('Integration | computeds', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,6 +23,7 @@ module('Integration | computeds', function (hooks) {
     );
     cardApi = await Loader.import(`${baseRealm.url}card-api`);
     string = await Loader.import(`${baseRealm.url}string`);
+    integer = await Loader.import(`${baseRealm.url}integer`);
   });
 
   test('can render a synchronous computed field', async function(assert) {
@@ -62,7 +64,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a computed that consumes a nested property', async function(assert) {
-    let { field, contains, Card, Component } = cardApi;
+    let { field, contains, Card, Component, createFromSerialized } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -77,7 +79,7 @@ module('Integration | computeds', function (hooks) {
       }
     }
 
-    let firstPost = Post.fromSerialized({ title: 'First Post', author: { firstName: 'Mango' } });
+    let firstPost = await createFromSerialized(Post, { title: 'First Post', author: { firstName: 'Mango' }});
     await renderCard(firstPost, 'isolated');
     assert.strictEqual(this.element.textContent!.trim(), 'First Post by Mango');
   });
@@ -171,7 +173,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a nested asynchronous computed field', async function(assert) {
-    let { field, contains, Card, Component } = cardApi;
+    let { field, contains, Card, Component, createFromSerialized } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -190,7 +192,7 @@ module('Integration | computeds', function (hooks) {
       }
     }
 
-    let firstPost = Post.fromSerialized({ title: 'First Post', author: { firstName: 'Mango' } });
+    let firstPost = await createFromSerialized(Post, { title: 'First Post', author: { firstName: 'Mango' }});
     await renderCard(firstPost, 'isolated');
     assert.strictEqual(cleanWhiteSpace(this.element.textContent!), 'First Post by Mango');
   });
@@ -270,7 +272,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a containsMany computed composite field', async function(assert) {
-    let { field, contains, containsMany, Card, Component } = cardApi;
+    let { field, contains, containsMany, Card, Component, createFromSerialized } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -290,7 +292,7 @@ module('Integration | computeds', function (hooks) {
         <template><@fields.slowPeople/></template>
       }
     }
-    let abdelRahmans = Family.fromSerialized({
+    let abdelRahmans = await createFromSerialized(Family, {
       people: [
         { firstName: 'Mango'},
         { firstName: 'Van Gogh'},
@@ -331,6 +333,43 @@ module('Integration | computeds', function (hooks) {
     assert.deepEqual(abdelRahmans.slowPeople, [], 'empty containsMany field is initialized to an empty array');
   });
 
+  test('can recompute containsMany field', async function(assert) {
+    let { field, contains, containsMany, Card, createFromSerialized, recompute } = cardApi;
+    let { default: StringCard} = string;
+    let { default: IntegerCard} = integer;
+
+    class Person extends Card {
+      @field firstName = contains(StringCard);
+      @field age = contains(IntegerCard);
+    }
+
+    class Family extends Card {
+      @field people = containsMany(Person);
+      @field totalAge = contains(IntegerCard, { computeVia: 'computeTotalAge'});
+      async computeTotalAge() {
+        let totalAge = this.people.reduce((sum, person) => sum += person.age, 0);
+        return totalAge;
+      }
+    }
+
+    let family = await createFromSerialized(Family, {
+      people: [{
+        firstName: "Mango",
+        age: 3
+      }, {
+        firstName: "Van Gogh",
+        age: 6
+      }]
+    });
+    await recompute(family);
+    assert.strictEqual(family.totalAge, 9, 'computed is correct');
+    family.people[0].age = 4;
+    family.people = [...family.people];
+
+    await recompute(family);
+    assert.strictEqual(family.totalAge, 10, 'computed is correct');
+  });
+
   test('computed fields render as embedded in the edit format', async function(assert) {
     let { field, contains, Card, } = cardApi;
     let { default: StringCard} = string;
@@ -346,7 +385,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can maintain data consistency for async computed fields', async function(assert) {
-    let { field, contains, Card, Component } = cardApi;
+    let { field, contains, Card, Component, createFromSerialized } = cardApi;
     let { default: StringCard} = string;
     class Location extends Card {
       @field city = contains(StringCard);
@@ -379,8 +418,7 @@ module('Integration | computeds', function (hooks) {
       }
     }
 
-    let person = Person.fromSerialized({ firstName: 'Mango', homeTown: { city: 'Bronxville' } });
-
+    let person = await createFromSerialized(Person, { firstName: 'Mango', homeTown: { city: 'Bronxville' }});
 
     await renderCard(person, 'edit');
     assert.dom('[data-test-field="slowName"]').containsText('Mango');

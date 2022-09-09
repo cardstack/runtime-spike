@@ -12,7 +12,7 @@ let cardApi: typeof import("https://cardstack.com/base/card-api");
 let string: typeof import ("https://cardstack.com/base/string");
 
 const formats: Format[] = ['isolated', 'embedded', 'edit'];
-module('Integration | card-editor', function (hooks) {
+module('Integration | preview', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(async function () {
@@ -170,7 +170,7 @@ module('Integration | card-editor', function (hooks) {
         type: 'card',
         attributes: {
           author: {
-            firstName: 'Mango'
+            firstName: 'Mango',
           },
           title: 'We Need to Go to the Dog Park Now!'
         },
