@@ -113,9 +113,10 @@ export default class CatalogEntryEditor extends Component<Signature> {
     if (!this.args.ref) {
       return;
     }
-    let module: Record<string, any> = await Loader.import(this.args.ref.module);
+    let module = await Loader.import<Record<string, typeof Card>>(this.args.ref.module);
     let Clazz = module[this.args.ref.name];
-    this.demo = Clazz.fromSerialized({});
+    let api = await Loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
+    this.demo = await api.createFromSerialized(Clazz, {});
   }
 }
 

@@ -21,6 +21,8 @@ import type { Card } from 'https://cardstack.com/base/card-api';
 import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency';
 
+type CardAPI = typeof import('https://cardstack.com/base/card-api');
+
 export default class CardCatalogModal extends Component {
   <template>
     {{#if this.currentRequest}}
@@ -78,7 +80,8 @@ export default class CardCatalogModal extends Component {
     if (resource) {
       let m = await Loader.import<Record<string, typeof Card>>(resource.meta.adoptsFrom.module);
       let Klass = m[resource.meta.adoptsFrom.name];
-      return Klass.fromSerialized(resource.attributes) as T;
+      let api = await Loader.import<CardAPI>('https://cardstack.com/base/card-api');
+      return await api.createFromSerialized(Klass, resource.attributes) as T;
     } else {
       return undefined;
     }
