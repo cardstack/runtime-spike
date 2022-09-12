@@ -148,6 +148,7 @@ export type {
 } from "./search-index";
 export { isCardResource, isCardDocument } from "./search-index";
 
+// @ts-ignore
 import type { Card } from "https://cardstack.com/base/card-api";
 
 export interface CardChooser {
