@@ -17,9 +17,6 @@ class EditView extends Component<typeof CatalogEntry> {
     <label data-test-field="ref">Ref
       <@fields.ref/>
     </label>
-    <div data-test-field="demo">
-      Demo: <@fields.demo/>
-    </div>
   </template>
 }
 
@@ -32,7 +29,6 @@ export class CatalogEntry extends Card {
     let Clazz: typeof Card = module[this.ref.name];
     return primitive in Clazz;
   }});
-  @field demo = contains(Card);
 
   // An explicit edit template is provided since computed isPrimitive bool
   // field (which renders in the embedded format) looks a little wonky
@@ -45,7 +41,6 @@ export class CatalogEntry extends Card {
       <div><@fields.description/></div>
       <div><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
-      <div><@fields.demo/></div>
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {
@@ -54,7 +49,6 @@ export class CatalogEntry extends Card {
       <div data-test-description><@fields.description/></div>
       <div data-test-ref><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
-      <div><@fields.demo/></div>
     </template>
   }
 }

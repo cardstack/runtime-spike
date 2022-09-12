@@ -134,7 +134,6 @@ module('Integration | catalog-entry-editor', function (hooks) {
               module: `${testRealmURL}person`,
               name: 'Person'
             },
-            demo: {}
           },
           meta: {
             adoptsFrom: {

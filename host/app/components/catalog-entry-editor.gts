@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { catalogEntryRef, type ExportedCardRef, Loader, type NewCardArgs } from '@cardstack/runtime-common';
+import { catalogEntryRef, type ExportedCardRef, type NewCardArgs } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -10,9 +10,6 @@ import type RouterService from '@ember/routing/router-service';
 import { cached } from '@glimmer/tracking';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
-import { task } from 'ember-concurrency';
-import { taskFor } from 'ember-concurrency-ts';
-import type { Card } from 'https://cardstack.com/base/card-api';
 import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
 import CardEditor from './card-editor';
@@ -60,12 +57,10 @@ export default class CatalogEntryEditor extends Component<Signature> {
   @service declare localRealm: LocalRealm;
   @service declare router: RouterService;
   catalogEntryRef = catalogEntryRef;
-  @tracked demo: Card | undefined = undefined;
-  @tracked catalogEntryAttributes = {
+  catalogEntryAttributes = {
     title: this.args.ref.name,
     description: `Catalog entry for ${this.args.ref.name} card`,
     ref: this.args.ref,
-    demo: this.demo
   }
   catalogEntry = getSearchResults(this, () => ({
     filter: {
@@ -74,12 +69,6 @@ export default class CatalogEntryEditor extends Component<Signature> {
     },
   }));
   @tracked showEditor = false;
-
-
-  constructor(owner: unknown, args: Signature['Args']) {
-    super(owner, args);
-    taskFor(this.loadRef).perform();
-  }
 
   get entry() {
     return this.catalogEntry.instances[0];
@@ -107,16 +96,6 @@ export default class CatalogEntryEditor extends Component<Signature> {
   @action
   onSave(path: string) {
     this.router.transitionTo({ queryParams: { path }});
-  }
-
-  @task private async loadRef() {
-    if (!this.args.ref) {
-      return;
-    }
-    let module = await Loader.import<Record<string, typeof Card>>(this.args.ref.module);
-    let Clazz = module[this.args.ref.name];
-    let api = await Loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-    this.demo = await api.createFromSerialized(Clazz, {});
   }
 }
 
