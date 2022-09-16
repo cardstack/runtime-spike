@@ -20,10 +20,7 @@ export default class Application extends Route<Model> {
   @service declare router: RouterService;
   @service declare localRealm: LocalRealm;
 
-  async model(args: {
-    path: string | undefined;
-    createNew: boolean | undefined;
-  }): Promise<Model> {
+  async model(args: { path: string | undefined }): Promise<Model> {
     let { path } = args;
 
     let openFile: FileResource | undefined;
