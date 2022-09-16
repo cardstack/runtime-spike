@@ -8,7 +8,7 @@ import { hash } from '@ember/helper';
 import { taskFor } from 'ember-concurrency-ts';
 import { restartableTask } from 'ember-concurrency';
 import type { CatalogEntry } from 'https://cardstack.com/base/catalog-entry';
-import CardEditor from './card-editor';
+import Preview from './preview';
 
 interface Signature {
   Args: {
@@ -27,9 +27,8 @@ export default class CreateNewCard extends Component<Signature> {
         <button {{on "click" this.closeEditor}} type="button">X Close</button>
         <div data-test-create-new-card={{this.selectedRef.name}}>
           <h1>Create New Card: {{this.selectedRef.name}}</h1>
-          <CardEditor
-            @moduleURL={{this.selectedRef.module}}
-            @cardArgs={{hash type="new" realmURL=@realmURL cardSource=this.selectedRef}}
+          <Preview
+            @card={{hash type="new" realmURL=@realmURL cardSource=this.selectedRef}}
             @onSave={{this.save}}
             @onCancel={{this.closeEditor}}
           />
