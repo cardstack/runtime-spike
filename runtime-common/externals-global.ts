@@ -82,12 +82,3 @@ import * as lodash from "lodash";
 (globalThis as any).RUNTIME_SPIKE_EXTERNALS.set("lodash", lodash);
 import * as dateFns from "date-fns";
 (globalThis as any).RUNTIME_SPIKE_EXTERNALS.set("date-fns", dateFns);
-// import * as emberService from "@ember/service";
-(globalThis as any).RUNTIME_SPIKE_EXTERNALS.set("@ember/service", {
-  default: class {},
-  service() {},
-});
-// import * as emberRouting from "@ember/routing";
-(globalThis as any).RUNTIME_SPIKE_EXTERNALS.set("@ember/routing", {
-  default() {},
-});

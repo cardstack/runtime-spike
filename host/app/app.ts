@@ -90,10 +90,6 @@ import * as tracked from 'tracked-built-ins';
 (window as any).RUNTIME_SPIKE_EXTERNALS.set('tracked-built-ins', tracked);
 import * as dateFns from 'date-fns';
 (window as any).RUNTIME_SPIKE_EXTERNALS.set('date-fns', dateFns);
-import * as emberService from '@ember/service';
-(window as any).RUNTIME_SPIKE_EXTERNALS.set('@ember/service', emberService);
-import * as emberRouting from '@ember/routing';
-(window as any).RUNTIME_SPIKE_EXTERNALS.set('@ember/routing', emberRouting);
 
 export default class App extends Application {
   modulePrefix = config.modulePrefix;

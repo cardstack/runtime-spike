@@ -96,8 +96,6 @@ export const externalsMap: Map<string, string[]> = new Map([
   ["lodash", ["flatMap", "startCase", "get", "set"]],
   ["tracked-built-ins", ["TrackedWeakMap"]],
   ["date-fns", ["parseISO", "format", "parse"]],
-  ["@ember/service", ["default", "service"]],
-  ["@ember/routing", ["default"]],
 ]);
 
 export { Realm } from "./realm";
