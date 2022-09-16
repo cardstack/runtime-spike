@@ -3,23 +3,19 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
-
-import Preview from './preview';
-
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import {
-  type LooseCardResource,
-  Loader
-} from '@cardstack/runtime-common';
-import type { Query } from '@cardstack/runtime-common/query';
-import { Deferred } from '@cardstack/runtime-common/deferred';
-
-import { getSearchResults, Search } from '../resources/search';
 import { registerDestructor } from '@ember/destroyable';
-import type { Card } from 'https://cardstack.com/base/card-api';
 import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency';
+import { service } from '@ember/service';
+import type { Card } from 'https://cardstack.com/base/card-api';
+import { type LooseCardResource, Loader } from '@cardstack/runtime-common';
+import type { Query } from '@cardstack/runtime-common/query';
+import { Deferred } from '@cardstack/runtime-common/deferred';
+import { getSearchResults, Search } from '../resources/search';
+import type LocalRealm from '../services/local-realm';
+import Preview from './preview';
 
 export default class CardCatalogModal extends Component {
   <template>
@@ -51,6 +47,8 @@ export default class CardCatalogModal extends Component {
     {{/if}}
   </template>
 
+  @service declare localRealm: LocalRealm;
+
   @tracked currentRequest: {
     search: Search;
     deferred: Deferred<LooseCardResource | undefined>;
@@ -76,7 +74,7 @@ export default class CardCatalogModal extends Component {
     let resource = await this.currentRequest.deferred.promise;
     if (resource) {
       let api = await Loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-      return await api.createFromSerialized(resource, undefined) as T;
+      return await api.createFromSerialized(resource, this.localRealm.url) as T;
     } else {
       return undefined;
     }
