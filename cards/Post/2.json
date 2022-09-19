@@ -1,0 +1,41 @@
+{
+  "data": {
+    "attributes": {
+      "author": {
+        "department": "wagging",
+        "firstName": "Jackie",
+        "lastName": "Aguilar",
+        "isCool": true,
+        "isHuman": false,
+        "favorite": {
+          "firstName": "Woody",
+          "sleepsOnTheCouch": false
+        }
+      },
+      "title": "Dogs"
+    },
+    "meta": {
+      "adoptsFrom": {
+        "module": "http://local-realm/post",
+        "name": "Post"
+      },
+      "fields": {
+        "author": {
+          "adoptsFrom": {
+            "module": "http://local-realm/employee",
+            "name": "Employee"
+          },
+          "fields": {
+            "favorite": {
+              "adoptsFrom": {
+                "module": "http://local-realm/pet",
+                "name": "Pet"
+              }
+            }
+          }
+        }
+      }
+    },
+    "type": "card"
+  }
+}

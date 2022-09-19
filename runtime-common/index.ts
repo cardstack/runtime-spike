@@ -49,7 +49,7 @@ export interface NewCardArgs {
   type: "new";
   realmURL: string;
   cardSource: ExportedCardRef;
-  initialAttributes?: LooseCardResource["attributes"];
+  initialCardResource?: LooseCardResource;
 }
 export interface ExistingCardArgs {
   type: "existing";

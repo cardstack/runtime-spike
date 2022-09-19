@@ -12,11 +12,11 @@ class BaseView extends Component<typeof CardRefCard> {
     <div data-test-ref>
       Module: {{@model.module}} Name: {{@model.name}}
     </div>
-    {{#if this.rendered.component}}
+    {{!-- {{#if this.rendered.component}}
       <div class="card">
         <this.rendered.component/>
       </div>
-    {{/if}}
+    {{/if}} --}}
   </template>
 
   @tracked component: ComponentLike<{ Args: {}; Blocks: {} }> | undefined;
