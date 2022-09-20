@@ -53,7 +53,7 @@ export class CatalogEntry extends Card {
       <div data-test-description><@fields.description/></div>
       <div data-test-ref><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
-      <div>Demo: <@fields.demo/></div>
+      <div data-test-demo>Demo: <@fields.demo/></div>
     </template>
   }
 }

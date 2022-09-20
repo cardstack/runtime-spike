@@ -55,27 +55,19 @@ module('Integration | catalog-entry-editor', function (hooks) {
     Loader.addRealmFetchOverride(realm);
     await realm.ready;
 
-    await realm.write('person.gts', `
+    await realm.write('pet.gts', `
       import { contains, field, Component, Card } from "https://cardstack.com/base/card-api";
       import StringCard from "https://cardstack.com/base/string";
-      import IntegerCard from "https://cardstack.com/base/integer";
-
-      export class Person extends Card {
-        @field firstName = contains(StringCard);
-        @field lastName = contains(StringCard);
-        @field email = contains(StringCard);
-        @field posts = contains(IntegerCard);
-        @field fullName = contains(StringCard, { computeVia: async function(this: Person) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return ((this.firstName ?? '') + ' ' + (this.lastName ?? '')).trim();
-        }});
+      import BooleanCard from "https://cardstack.com/base/boolean";
+      export class Pet extends Card {
+        @field name = contains(StringCard);
+        @field lovesWalks = contains(BooleanCard);
         static isolated = class Isolated extends Component<typeof this> {
-          <template><h1><@fields.firstName/></h1></template>
+          <template><h1><@fields.name/></h1><@fields.lovesWalks/></template>
         }
         static embedded = class Embedded extends Component<typeof this> {
-          <template><h3>Person: <@fields.firstName/></h3></template>
+          <template><@fields.name/></template>
         }
-        static demo: Record<string, any> = { firstName: 'Mango' }
       }
     `);
 
@@ -91,7 +83,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     let router = this.owner.lookup('service:router') as MockRouter;
     let deferred = new Deferred<void>();
     router.initialize(assert, { queryParams: { path: `${testRealmURL}CatalogEntry/1.json`}}, deferred);
-    const args: ExportedCardRef =  { module: `${testRealmURL}person`, name: 'Person' };
+    const args: ExportedCardRef =  { module: `${testRealmURL}pet`, name: 'Pet' };
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
@@ -104,14 +96,18 @@ module('Integration | catalog-entry-editor', function (hooks) {
     await click('[data-test-catalog-entry-publish]');
     await waitUntil(() => Boolean(document.querySelector('[data-test-ref]')));
 
-    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Person');
-    assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Catalog entry for Person card');
-    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText(`Module: ${testRealmURL}person Name: Person`);
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Pet');
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Catalog entry for Pet card');
+    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText(`Module: ${testRealmURL}pet Name: Pet`);
+    assert.dom('[data-test-field="demo"] [data-test-field="name"] input').hasText('');
+    assert.dom('[data-test-field="demo"] [data-test-field="lovesWalks"] label:nth-of-type(2) input').isChecked();
 
-    await fillIn('[data-test-catalog-entry-editor] [data-test-field="title"] input', 'Person test');
-    await fillIn('[data-test-catalog-entry-editor] [data-test-field="description"] input', 'test description');
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="title"] input', 'Pet test');
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="description"] input', 'Test description');
+    await fillIn('[data-test-field="demo"] [data-test-field="name"] input', 'Jackie');
+    await click('[data-test-field="demo"] [data-test-field="lovesWalks"] label:nth-of-type(1) input');
 
-    await click('button[data-test-save-card');
+    await click('button[data-test-save-card]');
 
     await deferred.promise; // wait for the component to transition on save
     let entry = await realm.searchIndex.card(new URL(`${testRealmURL}CatalogEntry/1`));
@@ -127,18 +123,30 @@ module('Integration | catalog-entry-editor', function (hooks) {
         data: {
           type: 'card',
           attributes: {
-            title: 'Person test',
-            description: 'test description',
+            title: 'Pet test',
+            description: 'Test description',
             ref: {
-              module: `${testRealmURL}person`,
-              name: 'Person'
+              module: `${testRealmURL}pet`,
+              name: 'Pet'
             },
+            demo: {
+              name: 'Jackie',
+              lovesWalks: true
+            }
           },
           meta: {
             adoptsFrom: {
               module: 'https://cardstack.com/base/catalog-entry',
               name: 'CatalogEntry',
             },
+            fields: {
+              demo: {
+                adoptsFrom: {
+                  module: `${testRealmURL}pet`,
+                  name: 'Pet',
+                }
+              }
+            }
           },
         },
       },
@@ -147,27 +155,39 @@ module('Integration | catalog-entry-editor', function (hooks) {
   });
 
   test('can edit existing catalog entry', async function (assert) {
-    await realm.write('person-catalog-entry.json', JSON.stringify({
+    await realm.write('pet-catalog-entry.json', JSON.stringify({
       data: {
         type: 'card',
         attributes: {
-          title: 'Person',
+          title: 'Pet',
           description: 'Catalog entry',
           ref: {
-            module: `${testRealmURL}person`,
-            name: 'Person'
+            module: `${testRealmURL}pet`,
+            name: 'Pet'
+          },
+          demo: {
+            name: 'Jackie',
+            lovesWalks: true
           }
         },
         meta: {
           adoptsFrom: {
             module:`${baseRealm.url}catalog-entry`,
             name: 'CatalogEntry'
+          },
+          fields: {
+            demo: {
+              adoptsFrom: {
+                module: `${testRealmURL}pet`,
+                name: 'Pet',
+              }
+            }
           }
         }
       }
     }));
 
-    const args: ExportedCardRef =  { module: `${testRealmURL}person`, name: 'Person' };
+    const args: ExportedCardRef =  { module: `${testRealmURL}pet`, name: 'Pet' };
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
@@ -178,29 +198,35 @@ module('Integration | catalog-entry-editor', function (hooks) {
 
     await waitUntil(() => Boolean(document.querySelector('[data-test-ref]')));
 
-    assert.dom('[data-test-catalog-entry-id]').hasText(`${testRealmURL}person-catalog-entry`);
-    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Person');
+    assert.dom('[data-test-catalog-entry-id]').hasText(`${testRealmURL}pet-catalog-entry`);
+    assert.dom('[data-test-catalog-entry-editor] [data-test-field="title"] input').hasValue('Pet');
     assert.dom('[data-test-catalog-entry-editor] [data-test-field="description"] input').hasValue('Catalog entry');
-    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText(`Module: ${testRealmURL}person Name: Person`);
+    assert.dom('[data-test-catalog-entry-editor] [data-test-ref]').containsText(`Module: ${testRealmURL}pet Name: Pet`);
+    assert.dom('[data-test-field="demo"] [data-test-field="name"] input').hasValue('Jackie');
+    assert.dom('[data-test-field="demo"] [data-test-field="lovesWalks"] label:nth-of-type(1) input').isChecked();
 
-    await fillIn('[data-test-catalog-entry-editor] [data-test-field="title"] input', 'Test title');
-    await fillIn('[data-test-catalog-entry-editor] [data-test-field="description"] input', 'Test entry');
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="title"] input', 'test title');
+    await fillIn('[data-test-catalog-entry-editor] [data-test-field="description"] input', 'test description');
+    await fillIn('[data-test-field="demo"] [data-test-field="name"] input', 'Jackie Wackie');
 
-    await click('button[data-test-save-card');
+    await click('button[data-test-save-card]');
     await waitUntil(() => !(document.querySelector('[data-test-saving]')));
 
-    assert.dom('button[data-test-save-card').doesNotExist();
-    assert.dom('[data-test-title]').containsText('Test title');
-    assert.dom('[data-test-description]').containsText('Test entry');
+    assert.dom('button[data-test-save-card]').doesNotExist();
+    assert.dom('[data-test-title]').exists();
+    assert.dom('[data-test-title]').containsText('test title');
+    assert.dom('[data-test-description]').containsText('test description');
+    assert.dom('[data-test-demo] [data-test-field="name"]').hasValue('Jackie Wackie');
 
-    let maybeError = await realm.searchIndex.card(new URL(`${testRealmURL}person-catalog-entry`));
+    let maybeError = await realm.searchIndex.card(new URL(`${testRealmURL}pet-catalog-entry`));
     if (maybeError?.type === 'error') {
       throw new Error(
         `unexpected error when getting card from index: ${maybeError.error.message}`
       );
     }
     let { entry } = maybeError!;
-    assert.strictEqual(entry?.resource.attributes?.title, 'Test title', 'catalog entry title was updated');
-    assert.strictEqual(entry?.resource.attributes?.description, 'Test entry', 'catalog entry description was updated');
+    assert.strictEqual(entry?.resource.attributes?.title, 'test title', 'catalog entry title was updated');
+    assert.strictEqual(entry?.resource.attributes?.description, 'test description', 'catalog entry description was updated');
+    assert.strictEqual(entry?.resource.attributes?.demo?.name, 'Jackie Wackie', 'demo name field was updated');
   });
 });
