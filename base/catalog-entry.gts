@@ -20,6 +20,10 @@ export class CatalogEntry extends Card {
   }});
   @field demo = contains(Card);
 
+  get showDemo() {
+    return !this.isPrimitive;
+  }
+
   // An explicit edit template is provided since computed isPrimitive bool
   // field (which renders in the embedded format) looks a little wonky
   // right now in the edit view.
@@ -46,16 +50,21 @@ export class CatalogEntry extends Card {
     <template>
       <h3><@fields.title/></h3>
       <p><em><@fields.description/></em></p>
-      <div class="card"><@fields.demo/></div>
+      <div><@fields.ref/></div>
+      {{#if @model.showDemo}}
+        <div class="card"><@fields.demo/></div>
+      {{/if}}
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {
     <template>
       <h1 data-test-title><@fields.title/></h1>
       <p data-test-description><em><@fields.description/></em></p>
-      <div data-test-ref><@fields.ref/></div>
+      <div><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
-      <div class="card" data-test-demo><@fields.demo/></div>
+      {{#if @model.showDemo}}
+        <div class="card" data-test-demo><@fields.demo/></div>
+      {{/if}}
     </template>
   }
 }
