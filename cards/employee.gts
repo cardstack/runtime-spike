@@ -6,7 +6,7 @@ export class Employee extends Person {
   @field department = contains(StringCard);
   static embedded = class Embedded extends Component<typeof this> {
     <template>
-      <@fields.firstName/> from <@fields.department/>
+      <@fields.firstName/> from <em><@fields.department/></em>
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {

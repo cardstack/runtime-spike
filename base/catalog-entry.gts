@@ -27,11 +27,10 @@ export class CatalogEntry extends Card {
         <label data-test-field="description">Description
           <@fields.description/>
         </label>
-        <label data-test-field="ref">Ref
+        <div data-test-field="ref">Ref
           <@fields.ref/>
-        </label>
-        <div data-test-field="demo">
-          Demo:
+        </div>
+        <div data-test-field="demo">Demo
           <@fields.demo/>
         </div>
       </div>
@@ -40,20 +39,18 @@ export class CatalogEntry extends Card {
 
   static embedded = class Embedded extends Component<typeof this> {
     <template>
-      <div><@fields.title/></div>
-      <div><@fields.description/></div>
-      <div><@fields.ref/></div>
-      <div><@fields.isPrimitive/></div>
-      <div><@fields.demo/></div>
+      <h3><@fields.title/></h3>
+      <p><em><@fields.description/></em></p>
+      <div class="card"><@fields.demo/></div>
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {
     <template>
-      <div data-test-title><@fields.title/></div>
-      <div data-test-description><@fields.description/></div>
+      <h1 data-test-title><@fields.title/></h1>
+      <p data-test-description><em><@fields.description/></em></p>
       <div data-test-ref><@fields.ref/></div>
       <div><@fields.isPrimitive/></div>
-      <div data-test-demo>Demo: <@fields.demo/></div>
+      <div class="card" data-test-demo><@fields.demo/></div>
     </template>
   }
 }
