@@ -52,7 +52,7 @@ export class CatalogEntry extends Card {
       <p><em><@fields.description/></em></p>
       <div><@fields.ref/></div>
       {{#if @model.showDemo}}
-        <div class="card"><@fields.demo/></div>
+        <div class="card" data-test-demo-embedded><@fields.demo/></div>
       {{/if}}
     </template>
   }
