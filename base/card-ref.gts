@@ -1,27 +1,17 @@
 import { Component, primitive, serialize, deserialize, queryableValue, Card, CardConstructor, CardInstanceType, createFromSerialized } from './card-api';
-import { ComponentLike } from '@glint/template';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import { render } from "./render-card";
-import { Loader } from "@cardstack/runtime-common";
-import type { ExportedCardRef } from "@cardstack/runtime-common";
 import { taskFor } from 'ember-concurrency-ts';
+import { type ExportedCardRef, Loader } from "@cardstack/runtime-common";
 
 class BaseView extends Component<typeof CardRefCard> {
   <template>
     <div data-test-ref>
       Module: {{@model.module}} Name: {{@model.name}}
     </div>
-    {{!-- {{#if this.rendered.component}}
-      <div class="card">
-        <this.rendered.component/>
-      </div>
-    {{/if}} --}}
   </template>
 
-  @tracked component: ComponentLike<{ Args: {}; Blocks: {} }> | undefined;
   @tracked card: Card | undefined;
-  rendered = render(this, () => this.card, () => 'embedded');
 
   constructor(owner: unknown, args: any) {
     super(owner, args);
@@ -48,7 +38,7 @@ class BaseView extends Component<typeof CardRefCard> {
 
 export default class CardRefCard extends Card {
   static [primitive]: ExportedCardRef;
-  
+
   static [serialize](cardRef: ExportedCardRef) {
     return {...cardRef}; // return a new object so that the model cannot be mutated from the outside
   }
