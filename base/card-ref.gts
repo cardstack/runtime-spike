@@ -1,8 +1,5 @@
-import { Component, primitive, serialize, deserialize, queryableValue, Card, CardConstructor, CardInstanceType, createFromSerialized } from './card-api';
-import { tracked } from '@glimmer/tracking';
-import { task } from 'ember-concurrency';
-import { taskFor } from 'ember-concurrency-ts';
-import { type ExportedCardRef, Loader } from "@cardstack/runtime-common";
+import { Component, primitive, serialize, deserialize, queryableValue, Card, CardConstructor, CardInstanceType } from './card-api';
+import { type ExportedCardRef } from "@cardstack/runtime-common";
 
 class BaseView extends Component<typeof CardRefCard> {
   <template>
@@ -10,30 +7,6 @@ class BaseView extends Component<typeof CardRefCard> {
       Module: {{@model.module}} Name: {{@model.name}}
     </div>
   </template>
-
-  @tracked card: Card | undefined;
-
-  constructor(owner: unknown, args: any) {
-    super(owner, args);
-    taskFor(this.loadCard).perform();
-  }
-
-  @task private async loadCard(this: BaseView) {
-    if (!this.args.model) {
-      return;
-    }
-    let module: Record<string, any> = await Loader.import(this.args.model.module);
-    let Clazz: typeof Card = module[this.args.model.name];
-    let resource = {
-      attributes: {
-        ...((Clazz as any).demo ?? {}),
-      },
-      meta: {
-        adoptsFrom: this.args.model
-      }
-    }
-    this.card = await createFromSerialized(resource, undefined);
-  }
 }
 
 export default class CardRefCard extends Card {
