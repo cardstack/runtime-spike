@@ -7,11 +7,9 @@ export class Person extends Card {
   @field lastName = contains(StringCard);
   @field isCool = contains(BooleanCard);
   @field isHuman = contains(BooleanCard);
-  @field favorite = contains(Card);
   static embedded = class Embedded extends Component<typeof this> {
     <template>
       <@fields.firstName/> <@fields.lastName />
-      <div><@fields.favorite/></div>
     </template>
   }
   static isolated = class Isolated extends Component<typeof this> {
@@ -19,7 +17,6 @@ export class Person extends Card {
       <h1><@fields.firstName/> <@fields.lastName /></h1>
       <div><@fields.isCool/></div>
       <div><@fields.isHuman/></div>
-      <div><@fields.favorite/></div>
     </template>
   }
 }

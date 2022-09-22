@@ -11,8 +11,7 @@
         "firstName": "Mango",
         "lastName": "Abdel-Rahman",
         "isCool": false,
-        "isHuman": false,
-        "favorite": {}
+        "isHuman": false
       }
     },
     "meta": {
