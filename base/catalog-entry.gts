@@ -61,7 +61,6 @@ export class CatalogEntry extends Card {
       <h1 data-test-title><@fields.title/></h1>
       <p data-test-description><em><@fields.description/></em></p>
       <div><@fields.ref/></div>
-      <div><@fields.isPrimitive/></div>
       {{#if @model.showDemo}}
         <div class="card" data-test-demo><@fields.demo/></div>
       {{/if}}

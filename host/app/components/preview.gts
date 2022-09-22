@@ -110,15 +110,6 @@ export default class Preview extends Component<Signature> {
       () => {
         if (this.args.card.type === 'new') {
           if (this.args.card.initialCardResource) {
-            if (!("attributes" in this.args.card.initialCardResource)) {
-              throw new Error('initialCardResource must have attributes');
-            }
-            if (!("meta" in this.args.card.initialCardResource)) {
-              throw new Error('initialCardResource must have meta');
-            }
-            if (this.args.card.initialCardResource.meta.adoptsFrom !== this.args.card.cardSource) {
-              throw new Error('initialCardResource must have meta.adoptsFrom that matches the cardSource');
-            }
             return this.args.card.initialCardResource;
           }
           return {
