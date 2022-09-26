@@ -281,6 +281,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     if (!fileRef) {
       throw new Error('file not found');
     }
+    // owner is intentionally an empty object, there is an owner instance that happens to not have attributes
     assert.deepEqual(
       JSON.parse(fileRef.content as string),
       {
@@ -295,7 +296,8 @@ module('Integration | catalog-entry-editor', function (hooks) {
             },
             demo: {
               name: 'Jackie',
-              lovesWalks: false
+              lovesWalks: false,
+              owner: {}
             },
           },
           meta: {
