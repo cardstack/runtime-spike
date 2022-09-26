@@ -76,7 +76,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
         title: this.args.ref.name,
         description: `Catalog entry for ${this.args.ref.name} card`,
         ref: this.args.ref,
-        demo: {}
+        demo: undefined
       },
       meta: {
         adoptsFrom: this.catalogEntryRef,

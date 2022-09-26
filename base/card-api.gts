@@ -352,14 +352,10 @@ class Contains<CardT extends CardConstructor> implements Field<CardT> {
   }
 
   async deserialize(value: any, fromResource: LooseCardResource | undefined): Promise<CardInstanceType<CardT>> {
-    if (value != null) {
-      if (isCardResource(fromResource)) {
-        value = hydrateField(fromResource, this.name, this.card);
-      }
-      return (await cardClassFromData(value, this.card))[deserialize](value);
-    } else {
-      return value;
+    if (isCardResource(fromResource)) {
+      value = hydrateField(fromResource, this.name, this.card);
     }
+    return (await cardClassFromData(value, this.card))[deserialize](value);
   }
 
   containsMany = false;
@@ -394,7 +390,7 @@ function hydrateField(resource: LooseCardResource, fieldName: string, fallback: 
     ...(resource.meta.fields?.[realField]?.fields ?? {})
   };
   return {
-    attributes: get(resource, `attributes.${fieldName}`),
+    attributes: get(resource, `attributes.${fieldName}`) ?? {},
     meta: {
       adoptsFrom,
       ...(Object.keys(fields).length > 0 ? { fields } : {})
