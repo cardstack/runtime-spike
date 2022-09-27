@@ -22,9 +22,3 @@ const CardContainer: TemplateOnlyComponent<Signature> = (
 );
 
 export default CardContainer;
-
-declare module "@glint/environment-ember-loose/registry" {
-  export default interface Registry {
-    CardContainer: typeof CardContainer;
-  }
-}
