@@ -1,5 +1,9 @@
 import type DOMAssertions from 'qunit-dom/dist/assertions';
-import { waitUntil, fillIn, click } from '@ember/test-helpers';
+import {
+  waitUntil,
+  fillIn as fillInHelper,
+  click as clickHelper,
+} from '@ember/test-helpers';
 
 // TODO: it would be more efficient to implement a shadowQuerySelector
 // that stops at the first found element
@@ -31,39 +35,37 @@ export function shadowQuerySelectorAll(
   }
 }
 
-export async function shadowWaitFor(
-  selector: string | Element,
+export async function waitFor(
+  selector: string,
   root: Document | Element | ShadowRoot | DocumentFragment = document
-): Promise<Element> {
+): Promise<void> {
   try {
-    return await waitUntil(() => shadowQuerySelector(selector, root));
+    await waitUntil(() => shadowQuerySelector(selector, root));
   } catch (e) {
-    throw new Error(
-      `shadowWaitFor timed out waiting for selector "${selector}"`
-    );
+    throw new Error(`waitFor timed out waiting for selector "${selector}"`);
   }
 }
 
-export async function shadowFillIn(
+export async function fillIn(
   selector: string | Element,
   text: string,
   root?: Document | Element | ShadowRoot | DocumentFragment
 ): Promise<void> {
   try {
-    return await fillIn(shadowQuerySelector(selector, root), text);
+    return await fillInHelper(shadowQuerySelector(selector, root), text);
   } catch (e) {
-    throw new Error(`shadowFillIn failed for selector "${selector}"`);
+    throw new Error(`fillIn failed for selector "${selector}"`);
   }
 }
 
-export async function shadowClick(
+export async function click(
   selector: string | Element,
   root?: Document | Element | ShadowRoot | DocumentFragment
 ): Promise<void> {
   try {
-    return await click(shadowQuerySelector(selector, root));
+    return await clickHelper(shadowQuerySelector(selector, root));
   } catch (e) {
-    throw new Error(`shadowClick failed for selector "${selector}"`);
+    throw new Error(`click failed for selector "${selector}"`);
   }
 }
 
