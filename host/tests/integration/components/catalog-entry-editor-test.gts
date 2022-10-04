@@ -111,7 +111,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     assert.shadowDOM('[data-test-field="demo"] [data-test-field="name"] input').hasText('');
     assert.shadowDOM('[data-test-field="demo"] [data-test-field="lovesWalks"] label:nth-of-type(2) input').isChecked();
 
-    await fillIn('[data-test-field="title"] input', 'Pet test', document.querySelector('[data-test-catalog-entry-editor]')!);
+    await fillIn('[data-test-field="title"] input', 'Pet test');
     await fillIn('[data-test-field="description"] input', 'Test description');
     await fillIn('[data-test-field="name"] input', 'Jackie');
     await click('[data-test-field="lovesWalks"] label:nth-of-type(1) input');

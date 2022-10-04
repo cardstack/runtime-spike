@@ -239,7 +239,7 @@ module('Integration | schema', function (hooks) {
     await waitFor('[data-test-card-id]');
     await fillIn('[data-test-new-field-name]', 'author');
     await click('[data-test-add-field]');
-    await waitFor('[data-test-ref]');
+    await waitFor('[data-test-card-catalog] [data-test-ref]');
 
     assert.dom(`[data-test-card-catalog] [data-test-card-catalog-item="${testRealmURL}person-entry"]`).exists('local realm composite card displayed');
     assert.dom(`[data-test-card-catalog] [data-test-card-catalog-item="${baseRealm.url}fields/boolean-field`).exists('base realm primitive field displayed');
@@ -256,7 +256,7 @@ module('Integration | schema', function (hooks) {
     assert.dom(`[data-test-card-catalog] [data-test-card-catalog-item="${testRealmURL}post-entry"]`).doesNotExist('own card is not available to choose as a field');
 
     await click(`[data-test-select="${testRealmURL}person-entry"]`);
-    await waitFor('[data-test-field="author"]');
+    await waitFor('.schema [data-test-field="author"]');
     assert.dom('[data-test-field="author"]').hasText(`Delete author - contains - field card ID: ${testRealmURL}person/Person`);
 
     let fileRef = await adapter.openFile('post.gts');
@@ -297,7 +297,7 @@ module('Integration | schema', function (hooks) {
     await fillIn('[data-test-new-field-name]', 'aliases');
     await click('[data-test-new-field-containsMany]');
     await click('[data-test-add-field]');
-    await waitFor('[data-test-ref]');
+    await waitFor('[data-test-card-catalog-modal] [data-test-ref]');
 
     await click(`[data-test-select="${baseRealm.url}fields/string-field"]`);
     await waitFor('[data-test-field="aliases"]');

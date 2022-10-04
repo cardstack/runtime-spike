@@ -1,6 +1,7 @@
 import type DOMAssertions from 'qunit-dom/dist/assertions';
 import {
   waitUntil,
+  waitFor as waitForHelper,
   fillIn as fillInHelper,
   click as clickHelper,
 } from '@ember/test-helpers';
@@ -35,38 +36,30 @@ export function shadowQuerySelectorAll(
   }
 }
 
-export async function waitFor(
-  selector: string,
-  root: Document | Element | ShadowRoot | DocumentFragment = document
-): Promise<void> {
+export async function waitFor(selector: string): Promise<Element | Element[]> {
   try {
-    await waitUntil(() => shadowQuerySelector(selector, root));
+    let el: Element | undefined = undefined;
+    for (let s of selector.split(' ')) {
+      el = await waitUntil(() => shadowQuerySelector(s, el));
+    }
+    return el!;
   } catch (e) {
-    throw new Error(`waitFor timed out waiting for selector "${selector}"`);
+    return await waitForHelper(selector);
   }
 }
 
 export async function fillIn(
   selector: string | Element,
-  text: string,
-  root?: Document | Element | ShadowRoot | DocumentFragment
+  text: string
 ): Promise<void> {
-  try {
-    return await fillInHelper(shadowQuerySelector(selector, root), text);
-  } catch (e) {
-    throw new Error(`fillIn failed for selector "${selector}"`);
-  }
+  return fillInHelper(shadowQuerySelector(selector) ?? selector, text);
 }
 
 export async function click(
   selector: string | Element,
-  root?: Document | Element | ShadowRoot | DocumentFragment
+  options?: MouseEventInit | undefined
 ): Promise<void> {
-  try {
-    return await clickHelper(shadowQuerySelector(selector, root));
-  } catch (e) {
-    throw new Error(`click failed for selector "${selector}"`);
-  }
+  await clickHelper(shadowQuerySelector(selector) ?? selector, options);
 }
 
 declare global {

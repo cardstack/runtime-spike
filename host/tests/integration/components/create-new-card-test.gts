@@ -144,7 +144,7 @@ module('Integration | create-new-card', function (hooks) {
     );
 
     await click('[data-test-create-new-card-button]');
-    await waitFor('[data-test-ref]');
+    await waitFor('[data-test-card-catalog-modal] [data-test-ref]');
 
     assert.dom('[data-test-card-catalog] li').exists({ count: 2 }, 'number of catalog items is correct');
     assert.dom(`[data-test-card-catalog] [data-test-card-catalog-item="${testRealmURL}person-entry"]`).exists('first item is correct');
