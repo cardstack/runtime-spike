@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { renderComponent } from '../../helpers/render-component';
 import Service from '@ember/service';
 import { TestRealm, TestRealmAdapter, testRealmURL } from '../../helpers';
-import CreateNewCard from 'runtime-spike/components/create-new-card';
+import CreateCardModal from 'runtime-spike/components/create-new-card';
 import CardCatalogModal from 'runtime-spike/components/card-catalog-modal';
 import { waitFor, fillIn, click } from '../../helpers/shadow-assert';
 import type LoaderService from 'runtime-spike/services/loader-service';
@@ -131,13 +131,13 @@ module('Integration | create-new-card', function (hooks) {
     let router = this.owner.lookup('service:router') as MockRouter;
     let deferred = new Deferred<void>();
     router.initialize(assert, { queryParams: { path: `${testRealmURL}Person/1.json` }}, deferred);
-    let onSave = function(path: string) {
-      router.transitionTo({ queryParams: { path }});
-    }
+    // let onSave = function(path: string) {
+    //   router.transitionTo({ queryParams: { path }});
+    // }
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
-          <CreateNewCard @realmURL={{testRealmURL}} @onSave={{onSave}} />
+          <CreateCardModal />
           <CardCatalogModal />
         </template>
       }

@@ -1,70 +1,76 @@
 import Component from '@glimmer/component';
-import { type ExportedCardRef, chooseCard, catalogEntryRef } from '@cardstack/runtime-common';
+import { type ExportedCardRef, LooseCardDocument } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 //@ts-ignore glint does not think `hash` is consumed-but it is in the template
 import { hash } from '@ember/helper';
-import { taskFor } from 'ember-concurrency-ts';
-import { restartableTask } from 'ember-concurrency';
-import type { CatalogEntry } from 'https://cardstack.com/base/catalog-entry';
 import Preview from './preview';
+import { registerDestructor } from '@ember/destroyable';
+import { taskFor } from 'ember-concurrency-ts';
+import { enqueueTask } from 'ember-concurrency';
+import { service } from '@ember/service';
+import type LocalRealm from '../services/local-realm';
+import type LoaderService from '../services/loader-service';
+import type { Card } from 'https://cardstack.com/base/card-api';
 
-interface Signature {
-  Args: {
-    realmURL: string;
-    onSave?: (url: string) => void;
-  }
-}
-
-export default class CreateNewCard extends Component<Signature> {
+export default class CreateCardModal extends Component {
   <template>
-    <button {{on "click" this.openCatalog}} type="button" data-test-create-new-card-button>
-      Create New Card
-    </button>
-    {{#if this.selectedRef}}
-      <dialog class="dialog-box" open>
-        <button {{on "click" this.closeEditor}} type="button">X Close</button>
-        <div data-test-create-new-card={{this.selectedRef.name}}>
-          <h1>Create New Card: {{this.selectedRef.name}}</h1>
-          <Preview
-            @card={{hash type="new" realmURL=@realmURL cardSource=this.selectedRef}}
-            @onSave={{this.save}}
-            @onCancel={{this.closeEditor}}
-          />
-        </div>
+    {{#if this.cardRef}}
+      <dialog class="dialog-box" open data-test-create-new-card={{this.cardRef.name}}>
+        <button {{on "click" this.close}} type="button">X Close</button>
+        <h1>Create New Card: {{this.cardRef.name}}</h1>
+        <Preview
+          @card={{hash type="new" realmURL=this.localRealm.url.href cardSource=this.cardRef}}
+          @onSave={{this.save}}
+          @onCancel={{this.close}}
+        />
       </dialog>
     {{/if}}
   </template>
 
-  @tracked selectedRef: ExportedCardRef | undefined;
+  @service declare localRealm: LocalRealm;
+  @service declare loaderService: LoaderService;
 
-  @action
-  openCatalog() {
-    taskFor(this.chooseNewCard).perform();
-  }
+  @tracked cardRef: ExportedCardRef | undefined;
 
-  @restartableTask private async chooseNewCard() {
-    let entry: CatalogEntry | undefined = await chooseCard({
-      filter: {
-        on: catalogEntryRef,
-        eq: { isPrimitive: false },
-      }
+  constructor(owner: unknown, args: {}) {
+    super(owner, args);
+    (globalThis as any)._CARDSTACK_CREATE_NEW_CARD = this;
+    registerDestructor(this, () => {
+      delete (globalThis as any)._CARDSTACK_CREATE_NEW_CARD;
     });
-    if (!entry) {
-      return;
-    }
-    this.selectedRef = entry.ref;
   }
 
-  @action
-  save(path: string) {
-    this.args.onSave?.(path);
-    this.closeEditor();
+  async create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    return await taskFor(this._create).perform(ref) as T | undefined;
   }
 
-  @action
-  closeEditor() {
-    this.selectedRef = undefined;
+  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    this.cardRef = ref;
+    // TODO: create card or retrieve newly created card?
+
+    // if (resource) {
+    //   let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
+    //   return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
+    // } else {
+      return undefined;
+    // }
   }
+
+  @action save(path: string, data: LooseCardDocument) {
+    console.log(path, data);
+    // TODO
+    this.close();
+  }
+
+  @action close(): void {
+    this.cardRef = undefined;
+  }
+}
+
+declare module '@glint/environment-ember-loose/registry' {
+  export default interface Registry {
+    CreateCardModal: typeof CreateCardModal;
+   }
 }
