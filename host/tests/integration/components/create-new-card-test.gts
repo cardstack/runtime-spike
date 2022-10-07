@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { renderComponent } from '../../helpers/render-component';
 import Service from '@ember/service';
 import { TestRealm, TestRealmAdapter, testRealmURL } from '../../helpers';
-import CreateCardModal from 'runtime-spike/components/create-new-card';
+import CreateCardModal from 'runtime-spike/components/create-card-modal';
 import CardCatalogModal from 'runtime-spike/components/card-catalog-modal';
 import { waitFor, fillIn, click } from '../../helpers/shadow-assert';
 import type LoaderService from 'runtime-spike/services/loader-service';
