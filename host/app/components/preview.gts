@@ -298,7 +298,7 @@ export default class Preview extends Component<Signature> {
     if (json.data.links?.self) {
       // this is to notify the application route to load a
       // new source path, so we use the actual .json extension
-      this.doSave(`${json.data.links.self}.json`);
+      this.doSave(json.data.links.self + '.json');
     }
   }
 
