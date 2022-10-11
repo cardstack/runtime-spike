@@ -70,9 +70,10 @@ export default class FileTree extends Component<Args> {
         eq: { isPrimitive: false },
       }
     });
-    if (card) {
-      await createNewCard(card.ref);
+    if (!card) {
+      return;
     }
+    return await createNewCard(card.ref);
   }
 
   @action

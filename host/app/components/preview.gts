@@ -33,7 +33,7 @@ interface Signature {
   Args: {
     formats?: Format[];
     onCancel?: () => void;
-    onSave?: (url: string, cardData: LooseCardDocument) => void;
+    onSave?: (url: string) => void;
     card: NewCardArgs | ExistingCardArgs;
   }
 }
@@ -296,13 +296,13 @@ export default class Preview extends Component<Signature> {
     if (json.data.links?.self) {
       // this is to notify the application route to load a
       // new source path, so we use the actual .json extension
-      this.doSave(`${json.data.links.self}.json`, this.initialCardData);
+      this.doSave(`${json.data.links.self}.json`);
     }
   }
 
-  doSave(path: string, data: LooseCardDocument) {
+  doSave(path: string) {
     if (this.args.onSave) {
-      this.args.onSave(path, data);
+      this.args.onSave(path);
     } else {
       this.setFormat('isolated')
     }

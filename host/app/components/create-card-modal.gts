@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { type ExportedCardRef, LooseCardDocument } from '@cardstack/runtime-common';
+import type { ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -7,11 +7,12 @@ import { tracked } from '@glimmer/tracking';
 import { hash } from '@ember/helper';
 import Preview from './preview';
 import { registerDestructor } from '@ember/destroyable';
-import { taskFor } from 'ember-concurrency-ts';
-import { enqueueTask } from 'ember-concurrency';
 import { service } from '@ember/service';
 import type LocalRealm from '../services/local-realm';
 import type LoaderService from '../services/loader-service';
+import type RouterService from '@ember/routing/router-service';
+import { taskFor } from 'ember-concurrency-ts';
+import { enqueueTask } from 'ember-concurrency'
 import type { Card } from 'https://cardstack.com/base/card-api';
 
 export default class CreateCardModal extends Component {
@@ -31,6 +32,7 @@ export default class CreateCardModal extends Component {
 
   @service declare localRealm: LocalRealm;
   @service declare loaderService: LoaderService;
+  @service declare router: RouterService;
 
   @tracked cardRef: ExportedCardRef | undefined;
 
@@ -42,25 +44,19 @@ export default class CreateCardModal extends Component {
     });
   }
 
-  async create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+  async create<T extends Card>(ref: ExportedCardRef): Promise<T | undefined> {
     return await taskFor(this._create).perform(ref) as T | undefined;
   }
 
-  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<T | undefined> {
     this.cardRef = ref;
-    // TODO: create card or retrieve newly created card?
-
-    // if (resource) {
-    //   let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-    //   return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
-    // } else {
-      return undefined;
-    // }
+    let module: Record<string, any> = await this.loaderService.loader.import(ref.module);
+    let Clazz: typeof Card = module[ref.name];
+    return new Clazz() as T;
   }
 
-  @action save(path: string, data: LooseCardDocument) {
-    console.log(path, data);
-    // TODO
+  @action save(path: string) {
+    this.router.transitionTo({ queryParams: { path } });
     this.close();
   }
 
