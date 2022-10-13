@@ -3,7 +3,6 @@ import Component from '@glimmer/component';
 import { cached } from '@glimmer/tracking';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { fn } from '@ember/helper';
 import { action } from '@ember/object';
 import isEqual from 'lodash/isEqual';
 import { restartableTask, task } from 'ember-concurrency';
@@ -25,6 +24,7 @@ import {
 import type { Format } from 'https://cardstack.com/base/card-api';
 import type LocalRealm from '../services/local-realm';
 import { RenderedCard } from 'https://cardstack.com/base/render-card';
+import FormatPicker from './format-picker';
 
 type CardAPI = typeof import('https://cardstack.com/base/card-api');
 type RenderedCardModule = typeof import('https://cardstack.com/base/render-card');
@@ -44,21 +44,12 @@ export default class Preview extends Component<Signature> {
       <h1>Error: {{this.cardError}}</h1>
     {{else}}
       {{#if @formats}}
-        <div>
-          Format:
-          {{#each @formats as |format|}}
-            {{!-- template-lint-disable require-button-type --}}
-            <button {{on "click" (fn this.setFormat format)}}
-              class="format-button {{format}} {{if (eq this.format format) 'selected'}}"
-              disabled={{if (eq this.format format) true false}}
-              data-test-format-button={{format}}
-            >
-              {{format}}
-            </button>
-          {{/each}}
-        </div>
+        <FormatPicker
+          @formats={{@formats}}
+          @selectedFormat={{this.format}}
+          @setFormat={{this.setFormat}}
+        />
       {{/if}}
-
       {{#if this.renderedCard}}
         <this.renderedCard/>
         {{!-- @glint-ignore glint doesn't know about EC task properties --}}

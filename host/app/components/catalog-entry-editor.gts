@@ -33,7 +33,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
             {{this.entry.id}}
           </LinkTo>
           <Preview
-            @formats={{formats}}
+            @formats={{this.formats}}
             @card={{hash type="existing" url=this.entry.id format="embedded" }}
           />
         </fieldset>
@@ -42,6 +42,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
           <fieldset>
             <legend>Publish New Card Type</legend>
             <Preview
+              @formats={{this.formats}}
               @card={{this.cardArgs}}
               @onSave={{this.onSave}}
               @onCancel={{this.onCancel}}
@@ -56,6 +57,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
     </div>
   </template>
 
+  formats = formats;
   @service declare localRealm: LocalRealm;
   @service declare loaderService: LoaderService;
   @service declare router: RouterService;
