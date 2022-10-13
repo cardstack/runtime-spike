@@ -59,8 +59,6 @@ export default class Preview extends Component<Signature> {
             <button data-test-save-card {{on "click" this.save}}>Save</button>
             {{#if (eq @card.type "new")}}
               <button data-test-cancel-create {{on "click" this.cancel}}>Cancel</button>
-            {{else}}
-              <button data-test-reset {{on "click" this.reset}}>Reset</button>
             {{/if}}
           </div>
         {{/if}}
@@ -73,8 +71,6 @@ export default class Preview extends Component<Signature> {
   @service declare localRealm: LocalRealm;
   @tracked
   format: Format = this.args.card.type === 'new' ? 'edit' : this.args.card.format ?? 'isolated';
-  @tracked
-  resetTime = Date.now();
   @tracked
   rendered: RenderedCard | undefined;
   @tracked
@@ -97,7 +93,6 @@ export default class Preview extends Component<Signature> {
 
   @cached
   get cardInstance() {
-    this.resetTime;
     return cardInstance(
       this,
       () => {
@@ -200,13 +195,6 @@ export default class Preview extends Component<Signature> {
   @action
   setFormat(format: Format) {
     this.format = format;
-  }
-
-  @action
-  reset() {
-    if (this.isDirty) {
-      this.resetTime = Date.now();
-    }
   }
 
   @action
