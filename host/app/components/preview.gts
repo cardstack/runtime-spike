@@ -40,32 +40,29 @@ interface Signature {
 
 export default class Preview extends Component<Signature> {
   <template>
-    {{#if this.cardError}}
-      <h1>Error: {{this.cardError}}</h1>
-    {{else}}
-      {{#if @formats}}
-        <FormatPicker
-          @formats={{@formats}}
-          @selectedFormat={{this.format}}
-          @setFormat={{this.setFormat}}
-        />
-      {{/if}}
-      {{#if this.renderedCard}}
-        <this.renderedCard/>
-        {{!-- @glint-ignore glint doesn't know about EC task properties --}}
-        {{#if this.write.last.isRunning}}
-          <span data-test-saving>Saving...</span>
-        {{else}}
-          {{#if this.isDirty}}
-            <div>
-              <button data-test-save-card {{on "click" this.save}}>Save</button>
-              {{#if (eq @card.type "new")}}
-                <button data-test-cancel-create {{on "click" this.cancel}}>Cancel</button>
-              {{else}}
-                <button data-test-reset {{on "click" this.reset}}>Reset</button>
-              {{/if}}
-            </div>
-          {{/if}}
+    {{#if @formats}}
+      <FormatPicker
+        @formats={{@formats}}
+        @selectedFormat={{this.format}}
+        @setFormat={{this.setFormat}}
+      />
+    {{/if}}
+
+    {{#if this.renderedCard}}
+      <this.renderedCard/>
+      {{!-- @glint-ignore glint doesn't know about EC task properties --}}
+      {{#if this.write.last.isRunning}}
+        <span data-test-saving>Saving...</span>
+      {{else}}
+        {{#if this.isDirty}}
+          <div>
+            <button data-test-save-card {{on "click" this.save}}>Save</button>
+            {{#if (eq @card.type "new")}}
+              <button data-test-cancel-create {{on "click" this.cancel}}>Cancel</button>
+            {{else}}
+              <button data-test-reset {{on "click" this.reset}}>Reset</button>
+            {{/if}}
+          </div>
         {{/if}}
       {{/if}}
     {{/if}}
@@ -82,7 +79,6 @@ export default class Preview extends Component<Signature> {
   rendered: RenderedCard | undefined;
   @tracked
   initialCardData: LooseCardDocument | undefined;
-  @tracked cardError: string | undefined;
   private declare interval: ReturnType<typeof setInterval>;
   private lastModified: number | undefined;
   private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
@@ -252,11 +248,6 @@ export default class Preview extends Component<Signature> {
       },
     });
     let json = await response.json();
-    if (!response.ok) {
-      this.cardError = (json.errors as string[]).join();
-      return;
-    }
-    this.cardError = undefined;
     if (!isCardSingleResourceDocument(json)) {
       throw new Error(`bug: server returned a non card document to us for ${url}`);
     }
