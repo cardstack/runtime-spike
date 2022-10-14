@@ -67,7 +67,6 @@ export default class Go extends Component<Signature> {
   @service declare loaderService: LoaderService;
   @tracked jsonError: string | undefined;
   @tracked card: Card | undefined;
-  // private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
@@ -105,8 +104,6 @@ export default class Go extends Component<Signature> {
     if (!url) {
       return;
     }
-    let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-      // return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
     let response = await this.loaderService.loader.fetch(url, {
       headers: {
         'Accept': 'application/vnd.api+json'
@@ -116,6 +113,7 @@ export default class Go extends Component<Signature> {
     if (!isCardSingleResourceDocument(json)) {
       throw new Error(`bug: server returned a non card document to us for ${url}`);
     }
+    let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
     let card = await api.createFromSerialized(json.data, this.localRealm.url, { loader: this.loaderService.loader });
     this.card = card;
   }

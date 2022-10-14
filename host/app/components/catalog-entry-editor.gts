@@ -48,7 +48,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
               <legend>Publish New Card Type</legend>
               <Preview
                 @formats={{this.formats}}
-                @newCard={{this.card.instance}}
+                @card={{this.card.instance}}
                 @onSave={{this.onSave}}
                 @onCancel={{this.onCancel}}
                 @realmURL={{this.localRealm.url.href}}

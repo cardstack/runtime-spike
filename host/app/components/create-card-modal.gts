@@ -24,7 +24,7 @@ export default class CreateCardModal extends Component {
         <h1>Create New Card: {{this.cardRef.name}}</h1>
         {{#if this.card.instance}}
           <Preview
-            @newCard={{this.card.instance}}
+            @card={{this.card.instance}}
             @realmURL={{this.localRealm.url.href}}
             @onSave={{this.save}}
             @onCancel={{this.close}}

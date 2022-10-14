@@ -41,6 +41,7 @@ module('Integration | preview', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
     let card = await createFromSerialized(TestCard, {
+      id: 'test-card',
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom: {
@@ -49,6 +50,7 @@ module('Integration | preview', function (hooks) {
         }
       }
     });
+
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
@@ -78,6 +80,7 @@ module('Integration | preview', function (hooks) {
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
 
     let card = await createFromSerialized(TestCard, {
+      id: 'test-card',
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom:
@@ -128,6 +131,7 @@ module('Integration | preview', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
     let card = await createFromSerialized(TestCard, {
+      id: 'test-card',
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom:
@@ -179,6 +183,7 @@ module('Integration | preview', function (hooks) {
     await shimModule(`${testRealmURL}test-cards`, { Person, Post }, loader);
 
     let card = await createFromSerialized(Post, {
+      id: 'test-card',
       attributes: {
         author: {
           firstName: 'Mango',

@@ -7,12 +7,11 @@ import { action } from '@ember/object';
 import isEqual from 'lodash/isEqual';
 import { restartableTask, task } from 'ember-concurrency';
 import { taskFor } from 'ember-concurrency-ts';
-import { registerDestructor } from '@ember/destroyable';
+// import { registerDestructor } from '@ember/destroyable';
 import { service } from '@ember/service';
 import RouterService from '@ember/routing/router-service';
 import LoaderService from '../services/loader-service';
 import { importResource } from '../resources/import';
-import { cardInstance } from '../resources/card-instance';
 import {
   LooseCardDocument,
   isCardSingleResourceDocument,
@@ -31,11 +30,10 @@ interface Signature {
   Args: {
     formats?: Format[];
     selectedFormat?: Format;
+    card: Card;
+    realmURL?: string;
     onCancel?: () => void;
     onSave?: (url: string) => void;
-    card?: Card;
-    newCard?: Card;
-    realmURL?: string;
   }
 }
 
@@ -57,10 +55,10 @@ export default class Preview extends Component<Signature> {
       {{else}}
         {{#if this.isDirty}}
           <div>
-            <button data-test-save-card {{on "click" this.save}}>Save</button>
-            {{#if @newCard}}
-              <button data-test-cancel-create {{on "click" this.cancel}}>Cancel</button>
-            {{/if}}
+            <button data-test-save-card {{on "click" this.save}} type="button">Save</button>
+            {{#unless @card.id}}
+              <button data-test-cancel-create {{on "click" this.cancel}} type="button">Cancel</button>
+            {{/unless}}
           </div>
         {{/if}}
       {{/if}}
@@ -70,12 +68,10 @@ export default class Preview extends Component<Signature> {
   @service declare router: RouterService;
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
-  @tracked
-  format: Format = this.args.newCard ? 'edit' : this.args.selectedFormat ?? 'isolated';
-  @tracked
-  rendered: RenderedCard | undefined;
-  @tracked
-  initialCardData: LooseCardDocument | undefined = undefined;
+  @tracked card = this.args.card;
+  @tracked format: Format = !this.args.card.id ? 'edit' : this.args.selectedFormat ?? 'isolated';
+  @tracked rendered: RenderedCard | undefined;
+  @tracked initialCardData: LooseCardDocument | undefined = undefined;
   private declare interval: ReturnType<typeof setInterval>;
   // private lastModified: number | undefined;
   private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
@@ -83,20 +79,11 @@ export default class Preview extends Component<Signature> {
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
-    if (this.args.newCard || this.args.card) {
-      taskFor(this.prepareNewInstance).perform();
-    // } else {
-    //   taskFor(this.loadData).perform(this.args.card?.id);
-    //   this.interval = setInterval(() => taskFor(this.loadData).perform(url), 1000);
-    }
-    registerDestructor(this, () => clearInterval(this.interval));
-  }
-
-  // cardInstance = this.args.card ? cardInstance(this, () => this.initialCardData?.data) : undefined;
-
-  @cached
-  get card(): Card | undefined {
-    return this.args.newCard ?? this.args.card;
+    taskFor(this.prepareNewInstance).perform();
+    // if (this.args.card.id) {
+      // this.interval = setInterval(() => taskFor(this.loadData).perform(this.args.card?.id), 1000);
+    // }
+    // registerDestructor(this, () => clearInterval(this.interval));
   }
 
   private get api() {
@@ -122,23 +109,9 @@ export default class Preview extends Component<Signature> {
   }
 
   private _currentJSON(includeComputeds: boolean) {
-    let json;
-    if (this.args.newCard) {
-      if (this.card === undefined) {
-        throw new Error('bug: this should never happen');
-      }
-      json = {
-        data: this.api.serializeCard(this.card, { includeComputeds })
-      };
-    } else {
-      if (this.card && this.initialCardData) {
-        json = {
-          data: this.api.serializeCard(this.card, { includeComputeds })
-        };
-      } else {
-        return undefined;
-      }
-    }
+    let json = {
+      data: this.api.serializeCard(this.card, { includeComputeds })
+    };
     if (!isCardSingleResourceDocument(json)) {
       throw new Error(`can't serialize card data for ${JSON.stringify(json)}`);
     }
@@ -158,7 +131,7 @@ export default class Preview extends Component<Signature> {
   // i would expect that this finds a new home after we start refactoring and
   // perhaps end up with a card model more similar to the one the compiler uses
   get isDirty() {
-    if (this.args.newCard) {
+    if (!this.args.card.id) {
       return true;
     }
     if (!this.currentJSON) {
@@ -193,6 +166,9 @@ export default class Preview extends Component<Signature> {
     if (!this.rendered) {
       this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
     }
+    if (this.args.card.id) {
+      this.initialCardData = { data: this.api.serializeCard(this.args.card) };
+    }
   }
 
   // @restartableTask private async loadData(url: string | undefined): Promise<void> {
@@ -202,11 +178,6 @@ export default class Preview extends Component<Signature> {
   //   await this.apiLoaded;
   //   if (!this.rendered) {
   //     this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
-  //   }
-
-  //   if (this.args.card?.json) {
-  //     this.initialCardData = await this.getComparableCardJson(this.args.card.json);
-  //     return;
   //   }
 
   //   let response = await this.loaderService.loader.fetch(url, {
@@ -225,8 +196,8 @@ export default class Preview extends Component<Signature> {
   // }
 
   @restartableTask private async write(): Promise<void> {
-    let url = this.args.newCard ? this.args.realmURL! : this.args.card!.id;
-    let method = this.args.newCard ? 'POST' : 'PATCH';
+    let url = this.args.card.id ?? this.args.realmURL;
+    let method = this.args.card.id ? 'PATCH' : 'POST';
     let response = await this.loaderService.loader.fetch(url, {
       method,
       headers: {
