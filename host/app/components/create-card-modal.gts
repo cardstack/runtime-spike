@@ -11,9 +11,10 @@ import { service } from '@ember/service';
 import type LocalRealm from '../services/local-realm';
 import type LoaderService from '../services/loader-service';
 import type RouterService from '@ember/routing/router-service';
-import { taskFor } from 'ember-concurrency-ts';
-import { enqueueTask } from 'ember-concurrency'
-import type { Card } from 'https://cardstack.com/base/card-api';
+// import { taskFor } from 'ember-concurrency-ts';
+// import { enqueueTask } from 'ember-concurrency'
+// import type { Card } from 'https://cardstack.com/base/card-api';
+import { cardInstance, type CardInstance } from '../resources/card-instance';
 
 export default class CreateCardModal extends Component {
   <template>
@@ -21,9 +22,9 @@ export default class CreateCardModal extends Component {
       <dialog class="dialog-box" open data-test-create-new-card={{this.cardRef.name}}>
         <button {{on "click" this.close}} type="button">X Close</button>
         <h1>Create New Card: {{this.cardRef.name}}</h1>
-        {{#if this.card}}
+        {{#if this.card.instance}}
           <Preview
-            @card={{this.card}}
+            @card={{this.card.instance}}
             @isNew={{true}}
             @realmURL={{this.localRealm.url.href}}
             @onSave={{this.save}}
@@ -38,7 +39,7 @@ export default class CreateCardModal extends Component {
   @service declare loaderService: LoaderService;
   @service declare router: RouterService;
 
-  @tracked card: Card | undefined;
+  @tracked card: CardInstance | undefined;
   @tracked cardRef: ExportedCardRef | undefined;
 
   constructor(owner: unknown, args: {}) {
@@ -50,15 +51,20 @@ export default class CreateCardModal extends Component {
   }
 
   async create(ref: ExportedCardRef): Promise<void> {
-    await taskFor(this._create).perform(ref);
+    this.cardRef = ref;
+    this.card = cardInstance(this, () => ({
+      meta: {
+        adoptsFrom: ref
+      }
+    }));
+    // await taskFor(this._create).perform(ref);
   }
 
-  @enqueueTask private async _create(ref: ExportedCardRef): Promise<void> {
-    this.cardRef = ref;
-    let module: Record<string, any> = await this.loaderService.loader.import(ref.module);
-    let Clazz: typeof Card = module[ref.name];
-    this.card = new Clazz();
-  }
+  // @enqueueTask private async _create(ref: ExportedCardRef): Promise<void> {
+  //   let module: Record<string, any> = await this.loaderService.loader.import(ref.module);
+  //   let Clazz: typeof Card = module[ref.name];
+  //   this.card = new Clazz();
+  // }
 
   @action save(path: string) {
     this.router.transitionTo({ queryParams: { path } });
