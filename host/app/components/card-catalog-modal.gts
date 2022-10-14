@@ -17,6 +17,7 @@ import { getSearchResults, Search } from '../resources/search';
 import type LocalRealm from '../services/local-realm';
 import type LoaderService from '../services/loader-service';
 import Preview from './preview';
+import { cardInstance, type CardInstance } from '../resources/card-instance';
 
 export default class CardCatalogModal extends Component {
   <template>
@@ -29,15 +30,15 @@ export default class CardCatalogModal extends Component {
             Loading...
           {{else}}
             <ul class="card-catalog" data-test-card-catalog>
-              {{#each this.currentRequest.search.instances as |entry|}}
-                <li data-test-card-catalog-item={{entry.id}}>
-                  <Preview
-                    @card={{hash type="existing" url=entry.id format="embedded"}}
-                  />
-                  <button {{on "click" (fn this.pick entry)}} type="button" data-test-select={{entry.id}}>
-                    Select
-                  </button>
-                </li>
+              {{#each this.cards as |card|}}
+                {{#if card}}
+                  <li data-test-card-catalog-item={{card.id}}>
+                    <Preview @c={{card}} />
+                    <button {{on "click" (fn this.pick card)}} type="button" data-test-select={{card.id}}>
+                      Select
+                    </button>
+                  </li>
+                {{/if}}
               {{else}}
                 <p>No cards available</p>
               {{/each}}
@@ -53,8 +54,14 @@ export default class CardCatalogModal extends Component {
 
   @tracked currentRequest: {
     search: Search;
-    deferred: Deferred<LooseCardResource | undefined>;
-  } | undefined;
+    deferred: Deferred<Card | undefined>;
+  } | undefined = undefined;
+
+  @tracked instances: LooseCardResource[] | undefined = this.currentRequest?.search.instances;
+  @tracked cardInstances: CardInstance[] | undefined  = this.instances?.map((instance) => cardInstance(this, () => instance));
+  get cards() {
+    return this.cardInstances?.map((c) => c.instance);
+  }
 
   constructor(owner: unknown, args: {}) {
     super(owner, args);
@@ -75,16 +82,18 @@ export default class CardCatalogModal extends Component {
     };
     let resource = await this.currentRequest.deferred.promise;
     if (resource) {
-      let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-      return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
+      console.log(resource);
+      return resource as T;
+      // let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
+      // return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
     } else {
       return undefined;
     }
   }
 
-  @action pick(resource?: LooseCardResource): void {
+  @action pick(card?: Card): void {
     if (this.currentRequest) {
-      this.currentRequest.deferred.resolve(resource);
+      this.currentRequest.deferred.resolve(card);
       this.currentRequest = undefined;
     }
   }

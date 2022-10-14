@@ -34,6 +34,7 @@ interface Signature {
     onCancel?: () => void;
     onSave?: (url: string) => void;
     card?: ExistingCardArgs;
+    c?: Card;
     newCard?: Card;
     realmURL?: string;
   }
@@ -83,7 +84,7 @@ export default class Preview extends Component<Signature> {
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
-    if (this.args.newCard) {
+    if (this.args.newCard || this.args.c) {
       taskFor(this.prepareNewInstance).perform();
     } else {
       taskFor(this.loadData).perform(this.args.card?.url);
@@ -111,6 +112,9 @@ export default class Preview extends Component<Signature> {
   get card(): Card | undefined {
     if (this.args.newCard) {
       return this.args.newCard;
+    }
+    if (this.args.c) {
+      return this.args.c;
     }
     return this.cardInstance?.instance;
   }
