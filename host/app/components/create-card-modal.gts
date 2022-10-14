@@ -21,11 +21,15 @@ export default class CreateCardModal extends Component {
       <dialog class="dialog-box" open data-test-create-new-card={{this.cardRef.name}}>
         <button {{on "click" this.close}} type="button">X Close</button>
         <h1>Create New Card: {{this.cardRef.name}}</h1>
-        <Preview
-          @card={{hash type="new" realmURL=this.localRealm.url.href cardSource=this.cardRef}}
-          @onSave={{this.save}}
-          @onCancel={{this.close}}
-        />
+        {{#if this.card}}
+          <Preview
+            @card={{this.card}}
+            @isNew={{true}}
+            @realmURL={{this.localRealm.url.href}}
+            @onSave={{this.save}}
+            @onCancel={{this.close}}
+          />
+        {{/if}}
       </dialog>
     {{/if}}
   </template>
@@ -34,6 +38,7 @@ export default class CreateCardModal extends Component {
   @service declare loaderService: LoaderService;
   @service declare router: RouterService;
 
+  @tracked card: Card | undefined;
   @tracked cardRef: ExportedCardRef | undefined;
 
   constructor(owner: unknown, args: {}) {
@@ -44,15 +49,15 @@ export default class CreateCardModal extends Component {
     });
   }
 
-  async create<T extends Card>(ref: ExportedCardRef): Promise<T | undefined> {
-    return await taskFor(this._create).perform(ref) as T | undefined;
+  async create(ref: ExportedCardRef): Promise<void> {
+    await taskFor(this._create).perform(ref);
   }
 
-  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<T | undefined> {
+  @enqueueTask private async _create(ref: ExportedCardRef): Promise<void> {
     this.cardRef = ref;
     let module: Record<string, any> = await this.loaderService.loader.import(ref.module);
     let Clazz: typeof Card = module[ref.name];
-    return new Clazz() as T;
+    this.card = new Clazz();
   }
 
   @action save(path: string) {

@@ -18,13 +18,13 @@ import {
   LooseCardDocument,
   isCardSingleResourceDocument,
   baseRealm,
-  type NewCardArgs,
   type ExistingCardArgs
 } from '@cardstack/runtime-common';
 import type { Format } from 'https://cardstack.com/base/card-api';
 import type LocalRealm from '../services/local-realm';
 import { RenderedCard } from 'https://cardstack.com/base/render-card';
 import FormatPicker from './format-picker';
+import type { Card } from 'https://cardstack.com/base/card-api';
 
 type CardAPI = typeof import('https://cardstack.com/base/card-api');
 type RenderedCardModule = typeof import('https://cardstack.com/base/render-card');
@@ -34,7 +34,10 @@ interface Signature {
     formats?: Format[];
     onCancel?: () => void;
     onSave?: (url: string) => void;
-    card: NewCardArgs | ExistingCardArgs;
+    existingCard?: ExistingCardArgs;
+    card?: Card;
+    isNew?: boolean;
+    realmURL?: string;
   }
 }
 
@@ -69,8 +72,9 @@ export default class Preview extends Component<Signature> {
   @service declare router: RouterService;
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
+  @tracked card: Card | undefined = this.args.card;
   @tracked
-  format: Format = this.args.card.type === 'new' ? 'edit' : this.args.card.format ?? 'isolated';
+  format: Format = this.args.isNew ? 'edit' : this.args.existingCard?.format ?? 'isolated';
   @tracked
   rendered: RenderedCard | undefined;
   @tracked
@@ -82,42 +86,36 @@ export default class Preview extends Component<Signature> {
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
-    if (this.args.card.type === 'existing') {
-      taskFor(this.loadData).perform(this.args.card.url);
-      this.interval = setInterval(() => taskFor(this.loadData).perform((this.args.card as any).url), 1000);
-    } else {
+    if (this.args.isNew) {
       taskFor(this.prepareNewInstance).perform();
+    } else {
+      taskFor(this.loadData).perform(this.args.existingCard.url);
+      this.interval = setInterval(() => taskFor(this.loadData).perform((this.args.existingCard as any).url), 1000);
     }
     registerDestructor(this, () => clearInterval(this.interval));
   }
 
   @cached
   get cardInstance() {
-    return cardInstance(
-      this,
-      () => {
-        if (this.args.card.type === 'new') {
-          if (this.args.card.initialCardResource) {
-            return this.args.card.initialCardResource;
+    if (!this.args.isNew) {
+      return cardInstance(
+        this,
+        () => {
+          if (this.initialCardData) {
+            return this.initialCardData.data;
           }
-          return {
-            attributes: {},
-            meta: {
-              adoptsFrom: {
-                ...this.args.card.cardSource
-              }
-            }
-          }
-        } else if (this.initialCardData) {
-          return this.initialCardData.data;
-        }
-        return;
-      },
-    );
+          return;
+        },
+      );
+    }
+    return;
   }
 
-  get card() {
-    return this.cardInstance.instance;
+  get existingCard(): Card | undefined {
+    if (this.args.isNew) {
+      return this.card;
+    }
+    return this.cardInstance?.instance;
   }
 
   private get api() {
@@ -144,7 +142,7 @@ export default class Preview extends Component<Signature> {
 
   private _currentJSON(includeComputeds: boolean) {
     let json;
-    if (this.args.card.type === 'new') {
+    if (this.args.isNew) {
       if (this.card === undefined) {
         throw new Error('bug: this should never happen');
       }
@@ -179,7 +177,7 @@ export default class Preview extends Component<Signature> {
   // i would expect that this finds a new home after we start refactoring and
   // perhaps end up with a card model more similar to the one the compiler uses
   get isDirty() {
-    if (this.args.card.type === 'new') {
+    if (this.args.isNew) {
       return true;
     }
     if (!this.currentJSON) {
@@ -222,11 +220,11 @@ export default class Preview extends Component<Signature> {
     }
     await this.apiLoaded;
     if (!this.rendered) {
-      this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
+      this.rendered = this.renderCard.render(this, () => this.existingCard, () => this.format);
     }
 
-    if (this.args.card.type === 'existing' && this.args.card.json) {
-      this.initialCardData = await this.getComparableCardJson(this.args.card.json);
+    if (!this.args.isNew && this.args.existingCard?.json) {
+      this.initialCardData = await this.getComparableCardJson(this.args.existingCard.json);
       return;
     }
 
@@ -246,8 +244,11 @@ export default class Preview extends Component<Signature> {
   }
 
   @restartableTask private async write(): Promise<void> {
-    let url = this.args.card.type === 'new' ? this.args.card.realmURL : this.args.card.url;
-    let method = this.args.card.type === 'new' ? 'POST' : 'PATCH';
+    if (!this.args.realmURL && !this.args.existingCard) {
+      throw new Error('bug: must provide a realmURL or existingCard');
+    }
+    let url = this.args.isNew ? this.args.realmURL! : this.args.existingCard!.url;
+    let method = this.args.isNew ? 'POST' : 'PATCH';
     let response = await this.loaderService.loader.fetch(url, {
       method,
       headers: {

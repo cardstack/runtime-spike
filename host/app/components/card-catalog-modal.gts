@@ -32,7 +32,7 @@ export default class CardCatalogModal extends Component {
               {{#each this.currentRequest.search.instances as |entry|}}
                 <li data-test-card-catalog-item={{entry.id}}>
                   <Preview
-                    @card={{hash type="existing" url=entry.id format="embedded"}}
+                    @existingCard={{hash type="existing" url=entry.id format="embedded"}}
                   />
                   <button {{on "click" (fn this.pick entry)}} type="button" data-test-select={{entry.id}}>
                     Select

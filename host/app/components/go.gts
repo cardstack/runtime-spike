@@ -46,7 +46,7 @@ export default class Go extends Component<Signature> {
             <Module @file={{this.openFile}}/>
           {{else if this.openFileCardJSON}}
             <Preview
-              @card={{this.cardArgs}}
+              @existingCard={{this.cardArgs}}
               @formats={{this.formats}}
             />
           {{else if this.jsonError}}

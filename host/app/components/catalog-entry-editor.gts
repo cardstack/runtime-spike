@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { catalogEntryRef, type ExportedCardRef, type NewCardArgs, type LooseCardResource } from '@cardstack/runtime-common';
+import { catalogEntryRef, type ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -14,6 +14,7 @@ import { hash } from '@ember/helper';
 import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
 import Preview from './preview';
+import { cardInstance } from '../resources/card-instance';
 
 interface Signature {
   Args: {
@@ -34,20 +35,24 @@ export default class CatalogEntryEditor extends Component<Signature> {
           </LinkTo>
           <Preview
             @formats={{this.formats}}
-            @card={{hash type="existing" url=this.entry.id format="embedded" }}
+            @existingCard={{hash type="existing" url=this.entry.id format="embedded" }}
           />
         </fieldset>
       {{else}}
         {{#if this.showEditor}}
-          <fieldset>
-            <legend>Publish New Card Type</legend>
-            <Preview
-              @formats={{this.formats}}
-              @card={{this.cardArgs}}
-              @onSave={{this.onSave}}
-              @onCancel={{this.onCancel}}
-            />
-          </fieldset>
+          {{#if this.card.instance}}
+            <fieldset>
+              <legend>Publish New Card Type</legend>
+              <Preview
+                @formats={{this.formats}}
+                @isNew={{true}}
+                @card={{this.card.instance}}
+                @onSave={{this.onSave}}
+                @onCancel={{this.onCancel}}
+                @realmURL={{this.localRealm.url.href}}
+              />
+            </fieldset>
+          {{/if}}
         {{else}}
           <button {{on "click" this.displayEditor}} type="button" data-test-catalog-entry-publish>
             Publish Card Type
@@ -76,37 +81,22 @@ export default class CatalogEntryEditor extends Component<Signature> {
     return this.catalogEntry.instances[0];
   }
 
-  get initialCardResource(): LooseCardResource | undefined {
-    if (!this.args.ref) {
-      return;
-    }
-    let resource = {
-      attributes: {
-        title: this.args.ref.name,
-        description: `Catalog entry for ${this.args.ref.name} card`,
-        ref: this.args.ref,
-        demo: undefined
-      },
-      meta: {
-        adoptsFrom: this.catalogEntryRef,
-        fields: {
-          demo: {
-            adoptsFrom: this.args.ref
-          }
+  card = cardInstance(this, () => ({
+    attributes: {
+      title: this.args.ref.name,
+      description: `Catalog entry for ${this.args.ref.name} card`,
+      ref: this.args.ref,
+      demo: undefined
+    },
+    meta: {
+      adoptsFrom: this.catalogEntryRef,
+      fields: {
+        demo: {
+          adoptsFrom: this.args.ref
         }
       }
     }
-    return resource;
-  }
-
-  get cardArgs(): NewCardArgs {
-    return {
-      type: 'new',
-      realmURL: this.localRealm.url.href,
-      cardSource: this.catalogEntryRef,
-      initialCardResource: this.initialCardResource,
-    }
-  }
+  }));
 
   @action
   displayEditor() {
