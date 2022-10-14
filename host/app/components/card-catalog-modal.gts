@@ -32,7 +32,7 @@ export default class CardCatalogModal extends Component {
             <ul class="card-catalog" data-test-card-catalog>
               {{#each this.cards as |card|}}
                 <li data-test-card-catalog-item={{card.id}}>
-                  <Preview @card={{card}} />
+                  <Preview @card={{card}} @selectedFormat="embedded" />
                   <button {{on "click" (fn this.pick card)}} type="button" data-test-select={{card.id}}>
                     Select
                   </button>
