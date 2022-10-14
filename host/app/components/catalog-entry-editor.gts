@@ -35,7 +35,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
           </LinkTo>
           <Preview
             @formats={{this.formats}}
-            @existingCard={{hash type="existing" url=this.entry.id format="embedded" }}
+            @card={{hash type="existing" url=this.entry.id format="embedded" }}
           />
         </fieldset>
       {{else}}
@@ -45,8 +45,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
               <legend>Publish New Card Type</legend>
               <Preview
                 @formats={{this.formats}}
-                @isNew={{true}}
-                @card={{this.card.instance}}
+                @newCard={{this.card.instance}}
                 @onSave={{this.onSave}}
                 @onCancel={{this.onCancel}}
                 @realmURL={{this.localRealm.url.href}}

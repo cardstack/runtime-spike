@@ -12,7 +12,6 @@ import { service } from '@ember/service';
 import RouterService from '@ember/routing/router-service';
 import LoaderService from '../services/loader-service';
 import { importResource } from '../resources/import';
-import { eq } from '../helpers/truth-helpers';
 import { cardInstance } from '../resources/card-instance';
 import {
   LooseCardDocument,
@@ -34,9 +33,8 @@ interface Signature {
     formats?: Format[];
     onCancel?: () => void;
     onSave?: (url: string) => void;
-    existingCard?: ExistingCardArgs;
-    card?: Card;
-    isNew?: boolean;
+    card?: ExistingCardArgs;
+    newCard?: Card;
     realmURL?: string;
   }
 }
@@ -60,7 +58,7 @@ export default class Preview extends Component<Signature> {
         {{#if this.isDirty}}
           <div>
             <button data-test-save-card {{on "click" this.save}}>Save</button>
-            {{#if (eq @card.type "new")}}
+            {{#if @newCard}}
               <button data-test-cancel-create {{on "click" this.cancel}}>Cancel</button>
             {{/if}}
           </div>
@@ -72,9 +70,8 @@ export default class Preview extends Component<Signature> {
   @service declare router: RouterService;
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
-  @tracked card: Card | undefined = this.args.card;
   @tracked
-  format: Format = this.args.isNew ? 'edit' : this.args.existingCard?.format ?? 'isolated';
+  format: Format = this.args.newCard ? 'edit' : this.args.card?.format ?? 'isolated';
   @tracked
   rendered: RenderedCard | undefined;
   @tracked
@@ -86,18 +83,18 @@ export default class Preview extends Component<Signature> {
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
-    if (this.args.isNew) {
+    if (this.args.newCard) {
       taskFor(this.prepareNewInstance).perform();
     } else {
-      taskFor(this.loadData).perform(this.args.existingCard.url);
-      this.interval = setInterval(() => taskFor(this.loadData).perform((this.args.existingCard as any).url), 1000);
+      taskFor(this.loadData).perform(this.args.card?.url);
+      this.interval = setInterval(() => taskFor(this.loadData).perform((this.args.card as any).url), 1000);
     }
     registerDestructor(this, () => clearInterval(this.interval));
   }
 
   @cached
   get cardInstance() {
-    if (!this.args.isNew) {
+    if (!this.args.newCard) {
       return cardInstance(
         this,
         () => {
@@ -111,9 +108,9 @@ export default class Preview extends Component<Signature> {
     return;
   }
 
-  get existingCard(): Card | undefined {
-    if (this.args.isNew) {
-      return this.card;
+  get card(): Card | undefined {
+    if (this.args.newCard) {
+      return this.args.newCard;
     }
     return this.cardInstance?.instance;
   }
@@ -142,7 +139,7 @@ export default class Preview extends Component<Signature> {
 
   private _currentJSON(includeComputeds: boolean) {
     let json;
-    if (this.args.isNew) {
+    if (this.args.newCard) {
       if (this.card === undefined) {
         throw new Error('bug: this should never happen');
       }
@@ -177,7 +174,7 @@ export default class Preview extends Component<Signature> {
   // i would expect that this finds a new home after we start refactoring and
   // perhaps end up with a card model more similar to the one the compiler uses
   get isDirty() {
-    if (this.args.isNew) {
+    if (this.args.newCard) {
       return true;
     }
     if (!this.currentJSON) {
@@ -220,11 +217,11 @@ export default class Preview extends Component<Signature> {
     }
     await this.apiLoaded;
     if (!this.rendered) {
-      this.rendered = this.renderCard.render(this, () => this.existingCard, () => this.format);
+      this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
     }
 
-    if (!this.args.isNew && this.args.existingCard?.json) {
-      this.initialCardData = await this.getComparableCardJson(this.args.existingCard.json);
+    if (!this.args.newCard && this.args.card?.json) {
+      this.initialCardData = await this.getComparableCardJson(this.args.card.json);
       return;
     }
 
@@ -244,11 +241,8 @@ export default class Preview extends Component<Signature> {
   }
 
   @restartableTask private async write(): Promise<void> {
-    if (!this.args.realmURL && !this.args.existingCard) {
-      throw new Error('bug: must provide a realmURL or existingCard');
-    }
-    let url = this.args.isNew ? this.args.realmURL! : this.args.existingCard!.url;
-    let method = this.args.isNew ? 'POST' : 'PATCH';
+    let url = this.args.newCard ? this.args.realmURL! : this.args.card!.url;
+    let method = this.args.newCard ? 'POST' : 'PATCH';
     let response = await this.loaderService.loader.fetch(url, {
       method,
       headers: {

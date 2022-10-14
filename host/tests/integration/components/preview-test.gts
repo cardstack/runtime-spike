@@ -214,28 +214,10 @@ module('Integration | preview', function (hooks) {
 
     await click('.format-button.edit')
     assert.shadowDOM('[data-test-save-card]').doesNotExist();
-    assert.shadowDOM('[data-test-reset]').doesNotExist();
 
     await waitFor('[data-test-field="title"] input'); // we need to wait for the card instance to load
     await fillIn('[data-test-field="title"] input', 'Why I Whine'); // dirty top level field
     assert.shadowDOM('[data-test-field="title"] input').hasValue('Why I Whine');
     assert.shadowDOM('[data-test-save-card]').exists();
-    assert.shadowDOM('[data-test-reset]').exists();
-
-    await click('[data-test-reset]');
-    assert.shadowDOM('[data-test-save-card]').doesNotExist();
-    assert.shadowDOM('[data-test-reset]').doesNotExist();
-    assert.shadowDOM('[data-test-field="title"] input').hasValue('We Need to Go to the Dog Park Now!');
-
-
-    await fillIn('[data-test-field="firstName"] input', 'Van Gogh'); // dirty nested field
-    assert.shadowDOM('[data-test-field="firstName"] input').hasValue('Van Gogh');
-    assert.shadowDOM('[data-test-save-card]').exists();
-    assert.shadowDOM('[data-test-reset]').exists();
-
-    await click('[data-test-reset]');
-    assert.shadowDOM('[data-test-save-card]').doesNotExist();
-    assert.shadowDOM('[data-test-reset]').doesNotExist();
-    assert.shadowDOM('[data-test-field="firstName"] input').hasValue('Mango');
   });
 });
