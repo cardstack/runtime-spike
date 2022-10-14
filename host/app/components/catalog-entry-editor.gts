@@ -33,10 +33,13 @@ export default class CatalogEntryEditor extends Component<Signature> {
           <LinkTo @route="application" @query={{hash path=(ensureJsonExtension this.entry.id)}} data-test-catalog-entry-id>
             {{this.entry.id}}
           </LinkTo>
-          <Preview
-            @formats={{this.formats}}
-            @card={{hash type="existing" url=this.entry.id format="embedded" }}
-          />
+          {{#if this.card.instance}}
+            <Preview
+              @formats={{this.formats}}
+              @selectedFormat="embedded"
+              @card={{this.card.instance}}
+            />
+          {{/if}}
         </fieldset>
       {{else}}
         {{#if this.showEditor}}
@@ -80,22 +83,30 @@ export default class CatalogEntryEditor extends Component<Signature> {
     return this.catalogEntry.instances[0];
   }
 
-  card = cardInstance(this, () => ({
-    attributes: {
-      title: this.args.ref.name,
-      description: `Catalog entry for ${this.args.ref.name} card`,
-      ref: this.args.ref,
-      demo: undefined
-    },
-    meta: {
-      adoptsFrom: this.catalogEntryRef,
-      fields: {
-        demo: {
-          adoptsFrom: this.args.ref
+  get resource() {
+    if (this.entry) {
+      return this.entry;
+    } else {
+      return {
+        attributes: {
+          title: this.args.ref.name,
+          description: `Catalog entry for ${this.args.ref.name} card`,
+          ref: this.args.ref,
+          demo: undefined
+        },
+        meta: {
+          adoptsFrom: this.catalogEntryRef,
+          fields: {
+            demo: {
+              adoptsFrom: this.args.ref
+            }
+          }
         }
-      }
+      };
     }
-  }));
+  }
+
+  card = cardInstance(this, () => this.resource);
 
   @action
   displayEditor() {

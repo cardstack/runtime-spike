@@ -31,14 +31,12 @@ export default class CardCatalogModal extends Component {
           {{else}}
             <ul class="card-catalog" data-test-card-catalog>
               {{#each this.cards as |card|}}
-                {{#if card}}
-                  <li data-test-card-catalog-item={{card.id}}>
-                    <Preview @c={{card}} />
-                    <button {{on "click" (fn this.pick card)}} type="button" data-test-select={{card.id}}>
-                      Select
-                    </button>
-                  </li>
-                {{/if}}
+                <li data-test-card-catalog-item={{card.id}}>
+                  <Preview @card={{card}} />
+                  <button {{on "click" (fn this.pick card)}} type="button" data-test-select={{card.id}}>
+                    Select
+                  </button>
+                </li>
               {{else}}
                 <p>No cards available</p>
               {{/each}}
@@ -80,12 +78,9 @@ export default class CardCatalogModal extends Component {
       search: getSearchResults(this, () => query),
       deferred: new Deferred(),
     };
-    let resource = await this.currentRequest.deferred.promise;
-    if (resource) {
-      console.log(resource);
-      return resource as T;
-      // let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');
-      // return await api.createFromSerialized(resource, this.localRealm.url, { loader: this.loaderService.loader }) as T;
+    let card = await this.currentRequest.deferred.promise;
+    if (card) {
+      return card as T;
     } else {
       return undefined;
     }

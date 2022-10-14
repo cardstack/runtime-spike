@@ -17,7 +17,6 @@ import {
   LooseCardDocument,
   isCardSingleResourceDocument,
   baseRealm,
-  type ExistingCardArgs
 } from '@cardstack/runtime-common';
 import type { Format } from 'https://cardstack.com/base/card-api';
 import type LocalRealm from '../services/local-realm';
@@ -31,10 +30,10 @@ type RenderedCardModule = typeof import('https://cardstack.com/base/render-card'
 interface Signature {
   Args: {
     formats?: Format[];
+    selectedFormat?: Format;
     onCancel?: () => void;
     onSave?: (url: string) => void;
-    card?: ExistingCardArgs;
-    c?: Card;
+    card?: Card;
     newCard?: Card;
     realmURL?: string;
   }
@@ -72,51 +71,32 @@ export default class Preview extends Component<Signature> {
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
   @tracked
-  format: Format = this.args.newCard ? 'edit' : this.args.card?.format ?? 'isolated';
+  format: Format = this.args.newCard ? 'edit' : this.args.selectedFormat ?? 'isolated';
   @tracked
   rendered: RenderedCard | undefined;
   @tracked
-  initialCardData: LooseCardDocument | undefined;
+  initialCardData: LooseCardDocument | undefined = undefined;
   private declare interval: ReturnType<typeof setInterval>;
-  private lastModified: number | undefined;
+  // private lastModified: number | undefined;
   private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
   private renderCardModule = importResource(this, () => `${baseRealm.url}render-card`);
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
-    if (this.args.newCard || this.args.c) {
+    if (this.args.newCard || this.args.card) {
       taskFor(this.prepareNewInstance).perform();
-    } else {
-      taskFor(this.loadData).perform(this.args.card?.url);
-      this.interval = setInterval(() => taskFor(this.loadData).perform((this.args.card as any).url), 1000);
+    // } else {
+    //   taskFor(this.loadData).perform(this.args.card?.id);
+    //   this.interval = setInterval(() => taskFor(this.loadData).perform(url), 1000);
     }
     registerDestructor(this, () => clearInterval(this.interval));
   }
 
-  @cached
-  get cardInstance() {
-    if (!this.args.newCard) {
-      return cardInstance(
-        this,
-        () => {
-          if (this.initialCardData) {
-            return this.initialCardData.data;
-          }
-          return;
-        },
-      );
-    }
-    return;
-  }
+  // cardInstance = this.args.card ? cardInstance(this, () => this.initialCardData?.data) : undefined;
 
+  @cached
   get card(): Card | undefined {
-    if (this.args.newCard) {
-      return this.args.newCard;
-    }
-    if (this.args.c) {
-      return this.args.c;
-    }
-    return this.cardInstance?.instance;
+    return this.args.newCard ?? this.args.card;
   }
 
   private get api() {
@@ -215,37 +195,37 @@ export default class Preview extends Component<Signature> {
     }
   }
 
-  @restartableTask private async loadData(url: string | undefined): Promise<void> {
-    if (!url) {
-      return;
-    }
-    await this.apiLoaded;
-    if (!this.rendered) {
-      this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
-    }
+  // @restartableTask private async loadData(url: string | undefined): Promise<void> {
+  //   if (!url) {
+  //     return;
+  //   }
+  //   await this.apiLoaded;
+  //   if (!this.rendered) {
+  //     this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
+  //   }
 
-    if (!this.args.newCard && this.args.card?.json) {
-      this.initialCardData = await this.getComparableCardJson(this.args.card.json);
-      return;
-    }
+  //   if (this.args.card?.json) {
+  //     this.initialCardData = await this.getComparableCardJson(this.args.card.json);
+  //     return;
+  //   }
 
-    let response = await this.loaderService.loader.fetch(url, {
-      headers: {
-        'Accept': 'application/vnd.api+json'
-      },
-    });
-    let json = await response.json();
-    if (!isCardSingleResourceDocument(json)) {
-      throw new Error(`bug: server returned a non card document to us for ${url}`);
-    }
-    if (this.lastModified !== json.data.meta.lastModified) {
-      this.lastModified = json.data.meta.lastModified;
-      this.initialCardData = await this.getComparableCardJson(json);
-    }
-  }
+  //   let response = await this.loaderService.loader.fetch(url, {
+  //     headers: {
+  //       'Accept': 'application/vnd.api+json'
+  //     },
+  //   });
+  //   let json = await response.json();
+  //   if (!isCardSingleResourceDocument(json)) {
+  //     throw new Error(`bug: server returned a non card document to us for ${url}`);
+  //   }
+  //   if (this.lastModified !== json.data.meta.lastModified) {
+  //     this.lastModified = json.data.meta.lastModified;
+  //     this.initialCardData = await this.getComparableCardJson(json);
+  //   }
+  // }
 
   @restartableTask private async write(): Promise<void> {
-    let url = this.args.newCard ? this.args.realmURL! : this.args.card!.url;
+    let url = this.args.newCard ? this.args.realmURL! : this.args.card!.id;
     let method = this.args.newCard ? 'POST' : 'PATCH';
     let response = await this.loaderService.loader.fetch(url, {
       method,
