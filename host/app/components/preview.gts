@@ -7,7 +7,7 @@ import { action } from '@ember/object';
 import isEqual from 'lodash/isEqual';
 import { restartableTask, task } from 'ember-concurrency';
 import { taskFor } from 'ember-concurrency-ts';
-// import { registerDestructor } from '@ember/destroyable';
+import { registerDestructor } from '@ember/destroyable';
 import { service } from '@ember/service';
 import RouterService from '@ember/routing/router-service';
 import LoaderService from '../services/loader-service';
@@ -68,22 +68,26 @@ export default class Preview extends Component<Signature> {
   @service declare router: RouterService;
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
-  @tracked card = this.args.card;
   @tracked format: Format = !this.args.card.id ? 'edit' : this.args.selectedFormat ?? 'isolated';
   @tracked rendered: RenderedCard | undefined;
   @tracked initialCardData: LooseCardDocument | undefined = undefined;
   private declare interval: ReturnType<typeof setInterval>;
-  // private lastModified: number | undefined;
+  private lastModified: number | undefined;
   private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
   private renderCardModule = importResource(this, () => `${baseRealm.url}render-card`);
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
     taskFor(this.prepareNewInstance).perform();
-    // if (this.args.card.id) {
-      // this.interval = setInterval(() => taskFor(this.loadData).perform(this.args.card?.id), 1000);
-    // }
-    // registerDestructor(this, () => clearInterval(this.interval));
+    if (this.args.card.id) {
+      this.interval = setInterval(() => taskFor(this.loadData).perform(this.args.card?.id), 1000);
+    }
+    registerDestructor(this, () => clearInterval(this.interval));
+  }
+
+  @cached
+  get card() {
+    return this.args.card;
   }
 
   private get api() {
@@ -137,7 +141,10 @@ export default class Preview extends Component<Signature> {
     if (!this.currentJSON) {
       return false;
     }
-    return !isEqual(this.initialCardData, this.comparableCurrentJSON);
+    if (this.initialCardData?.data.id === this.comparableCurrentJSON.data.id) {
+      return !isEqual(this.initialCardData, this.comparableCurrentJSON);
+    }
+    return false;
   }
 
   get renderedCard() {
@@ -171,29 +178,29 @@ export default class Preview extends Component<Signature> {
     }
   }
 
-  // @restartableTask private async loadData(url: string | undefined): Promise<void> {
-  //   if (!url) {
-  //     return;
-  //   }
-  //   await this.apiLoaded;
-  //   if (!this.rendered) {
-  //     this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
-  //   }
+  @restartableTask private async loadData(url: string | undefined): Promise<void> {
+    if (!url) {
+      return;
+    }
+    await this.apiLoaded;
+    if (!this.rendered) {
+      this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
+    }
 
-  //   let response = await this.loaderService.loader.fetch(url, {
-  //     headers: {
-  //       'Accept': 'application/vnd.api+json'
-  //     },
-  //   });
-  //   let json = await response.json();
-  //   if (!isCardSingleResourceDocument(json)) {
-  //     throw new Error(`bug: server returned a non card document to us for ${url}`);
-  //   }
-  //   if (this.lastModified !== json.data.meta.lastModified) {
-  //     this.lastModified = json.data.meta.lastModified;
-  //     this.initialCardData = await this.getComparableCardJson(json);
-  //   }
-  // }
+    let response = await this.loaderService.loader.fetch(url, {
+      headers: {
+        'Accept': 'application/vnd.api+json'
+      },
+    });
+    let json = await response.json();
+    if (!isCardSingleResourceDocument(json)) {
+      throw new Error(`bug: server returned a non card document to us for ${url}`);
+    }
+    if (this.lastModified !== json.data.meta.lastModified) {
+      this.lastModified = json.data.meta.lastModified;
+      this.initialCardData = await this.getComparableCardJson(json);
+    }
+  }
 
   @restartableTask private async write(): Promise<void> {
     let url = this.args.card.id ?? this.args.realmURL;
