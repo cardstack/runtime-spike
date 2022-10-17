@@ -12,11 +12,7 @@ import { service } from '@ember/service';
 import RouterService from '@ember/routing/router-service';
 import LoaderService from '../services/loader-service';
 import { importResource } from '../resources/import';
-import {
-  LooseCardDocument,
-  isCardSingleResourceDocument,
-  baseRealm,
-} from '@cardstack/runtime-common';
+import { LooseSingleCardDocument,isSingleCardDocument, baseRealm } from '@cardstack/runtime-common';
 import type { Format } from 'https://cardstack.com/base/card-api';
 import type LocalRealm from '../services/local-realm';
 import { RenderedCard } from 'https://cardstack.com/base/render-card';
@@ -70,7 +66,7 @@ export default class Preview extends Component<Signature> {
   @service declare localRealm: LocalRealm;
   @tracked format: Format = !this.args.card.id ? 'edit' : this.args.selectedFormat ?? 'isolated';
   @tracked rendered: RenderedCard | undefined;
-  @tracked initialCardData: LooseCardDocument | undefined = undefined;
+  @tracked initialCardData: LooseSingleCardDocument | undefined = undefined;
   private declare interval: ReturnType<typeof setInterval>;
   private lastModified: number | undefined;
   private apiModule = importResource(this, () => `${baseRealm.url}card-api`);
@@ -113,13 +109,7 @@ export default class Preview extends Component<Signature> {
   }
 
   private _currentJSON(includeComputeds: boolean) {
-    let json = {
-      data: this.api.serializeCard(this.card, { includeComputeds })
-    };
-    if (!isCardSingleResourceDocument(json)) {
-      throw new Error(`can't serialize card data for ${JSON.stringify(json)}`);
-    }
-    return json;
+    return this.api.serializeCard(this.card, { includeComputeds });
   }
 
   @cached
@@ -193,7 +183,7 @@ export default class Preview extends Component<Signature> {
       },
     });
     let json = await response.json();
-    if (!isCardSingleResourceDocument(json)) {
+    if (!isSingleCardDocument(json)) {
       throw new Error(`bug: server returned a non card document to us for ${url}`);
     }
     if (this.lastModified !== json.data.meta.lastModified) {
@@ -237,8 +227,8 @@ export default class Preview extends Component<Signature> {
     }
   }
 
-  private async getComparableCardJson(json: LooseCardDocument): Promise<LooseCardDocument> {
+  private async getComparableCardJson(json: LooseSingleCardDocument): Promise<LooseSingleCardDocument> {
     let card = await this.api.createFromSerialized(json.data, this.localRealm.url, { loader: this.loaderService.loader });
-    return { data: this.api.serializeCard(card) };
+    return this.api.serializeCard(card);
   }
 }
