@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 //@ts-ignore cached not available yet in definitely typed
 import { cached } from '@glimmer/tracking';
 import { tracked } from '@glimmer/tracking';
-import { isCardDocument, isCardSingleResourceDocument } from '@cardstack/runtime-common';
+import { isCardDocument, isSingleCardDocument } from '@cardstack/runtime-common';
 import type { Format } from "https://cardstack.com/base/card-api";
 import LocalRealm from '../services/local-realm';
 import LoaderService from '../services/loader-service';
@@ -110,7 +110,7 @@ export default class Go extends Component<Signature> {
       },
     });
     let json = await response.json();
-    if (!isCardSingleResourceDocument(json)) {
+    if (!isSingleCardDocument(json)) {
       throw new Error(`bug: server returned a non card document to us for ${url}`);
     }
     let api = await this.loaderService.loader.import<typeof import('https://cardstack.com/base/card-api')>('https://cardstack.com/base/card-api');

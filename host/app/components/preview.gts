@@ -163,9 +163,6 @@ export default class Preview extends Component<Signature> {
     if (!this.rendered) {
       this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
     }
-    if (this.args.card.id) {
-      this.initialCardData = { data: this.api.serializeCard(this.args.card) };
-    }
   }
 
   @restartableTask private async loadData(url: string | undefined): Promise<void> {
