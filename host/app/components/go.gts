@@ -12,7 +12,7 @@ import type { Format } from "https://cardstack.com/base/card-api";
 import LocalRealm from '../services/local-realm';
 import LoaderService from '../services/loader-service';
 import type { FileResource } from '../resources/file';
-import Preview from './preview';
+import CardEditor from './card-editor';
 import Module from './module';
 import FileTree from './file-tree';
 import {
@@ -47,9 +47,10 @@ export default class Go extends Component<Signature> {
             <Module @file={{this.openFile}}/>
           {{else if this.openFileCardJSON}}
             {{#if this.card}}
-              <Preview
+              <CardEditor
                 @card={{this.card}}
                 @formats={{this.formats}}
+                @selectedFormat="isolated"
               />
             {{/if}}
           {{else if this.jsonError}}

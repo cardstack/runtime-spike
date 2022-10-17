@@ -13,7 +13,7 @@ import { cached } from '@glimmer/tracking';
 import { hash } from '@ember/helper';
 import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
-import Preview from './preview';
+import CardEditor from './card-editor';
 import { cardInstance } from '../resources/card-instance';
 
 interface Signature {
@@ -34,7 +34,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
             {{this.entry.id}}
           </LinkTo>
           {{#if this.card.instance}}
-            <Preview
+            <CardEditor
               @formats={{this.formats}}
               @selectedFormat="embedded"
               @card={{this.card.instance}}
@@ -46,7 +46,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
           {{#if this.card.instance}}
             <fieldset>
               <legend>Publish New Card Type</legend>
-              <Preview
+              <CardEditor
                 @formats={{this.formats}}
                 @card={{this.card.instance}}
                 @onSave={{this.onSave}}

@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 //@ts-ignore glint does not think `hash` is consumed-but it is in the template
 import { hash } from '@ember/helper';
-import Preview from './preview';
+import CardEditor from './card-editor';
 import { registerDestructor } from '@ember/destroyable';
 import { service } from '@ember/service';
 import type LocalRealm from '../services/local-realm';
@@ -23,10 +23,10 @@ export default class CreateCardModal extends Component {
         <button {{on "click" this.close}} type="button">X Close</button>
         <h1>Create New Card: {{this.cardRef.name}}</h1>
         {{#if this.card.instance}}
-          <Preview
+          <CardEditor
             @card={{this.card.instance}}
             @realmURL={{this.localRealm.url.href}}
-            @onSave={{this.save}}
+            @onSave={{this.close}}
             @onCancel={{this.close}}
           />
         {{/if}}
@@ -64,11 +64,6 @@ export default class CreateCardModal extends Component {
   //   let Clazz: typeof Card = module[ref.name];
   //   this.card = new Clazz();
   // }
-
-  @action save(path: string) {
-    this.router.transitionTo({ queryParams: { path } });
-    this.close();
-  }
 
   @action close(): void {
     this.cardRef = undefined;
