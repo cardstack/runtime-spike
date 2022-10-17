@@ -5,7 +5,7 @@ import { Loader, baseRealm } from '@cardstack/runtime-common';
 import Preview  from 'runtime-spike/components/preview';
 import Service from '@ember/service';
 import { renderComponent } from '../../helpers/render-component';
-import { testRealmURL, shimModule } from '../../helpers';
+import { testRealmURL, shimModule, TestRealm } from '../../helpers';
 import type { Format } from "https://cardstack.com/base/card-api";
 import { waitFor, fillIn, click } from '../../helpers/shadow-assert';
 import type LoaderService from 'runtime-spike/services/loader-service';
@@ -41,7 +41,7 @@ module('Integration | preview', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
     let card = await createFromSerialized(TestCard, {
-      id: 'test-card',
+      id: `${testRealmURL}test-cards/test-card`, // madeup id to satisfy saved card condition
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom: {
@@ -80,7 +80,7 @@ module('Integration | preview', function (hooks) {
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
 
     let card = await createFromSerialized(TestCard, {
-      id: 'test-card',
+      id: `${testRealmURL}test-cards/test-card`, // madeup id to satisfy saved card condition
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom:
@@ -131,7 +131,7 @@ module('Integration | preview', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { TestCard }, loader);
     let card = await createFromSerialized(TestCard, {
-      id: 'test-card',
+      id: `${testRealmURL}test-cards/test-card`, // madeup id to satisfy saved card condition
       attributes: { firstName: 'Mango' },
       meta: {
         adoptsFrom:
@@ -141,7 +141,6 @@ module('Integration | preview', function (hooks) {
         }
       }
     });
-
     await renderComponent(
       class TestDriver extends GlimmerComponent {
         <template>
@@ -162,41 +161,63 @@ module('Integration | preview', function (hooks) {
   });
 
   test('can detect when card is dirty', async function(assert) {
-    let { field, contains, Card, Component, createFromSerialized } = cardApi;
-    let { default: StringCard} = string;
-    class Person extends Card {
-      @field firstName = contains(StringCard);
-      static embedded = class Embedded extends Component<typeof this> {
-        <template><@fields.firstName /></template>
-      }
-    }
-
-    class Post extends Card{
-      @field title = contains(StringCard);
-      @field author = contains(Person);
-      @field nickName = contains(StringCard, {
-        computeVia: function(this: Post) {
-          return this.author.firstName + '-poo';
+    let { createFromSerialized } = cardApi;
+    Loader.addURLMapping(
+      new URL(baseRealm.url),
+      new URL('http://localhost:4201/base/')
+    );
+    let realm = TestRealm.create({});
+    loader.addRealmFetchOverride(realm);
+    await realm.ready;
+    await realm.write('person.gts', `
+      import { contains, field, Card, Component } from 'https://cardstack.com/base/card-api';
+      import StringCard from 'https://cardstack.com/base/string';
+      export class Person extends Card {
+        @field firstName = contains(StringCard);
+        static embedded = class Embedded extends Component<typeof this> {
+          <template><@fields.firstName /></template>
         }
-      });
-    }
-    await shimModule(`${testRealmURL}test-cards`, { Person, Post }, loader);
-
-    let card = await createFromSerialized(Post, {
-      id: 'test-card',
-      attributes: {
-        author: {
-          firstName: 'Mango',
+      }
+    `);
+    await realm.write('post.gts', `
+      import { contains, field, Card } from 'https://cardstack.com/base/card-api';
+      import StringCard from 'https://cardstack.com/base/string';
+      import { Person } from './person.gts';
+      export class Post extends Card{
+        @field title = contains(StringCard);
+        @field author = contains(Person);
+        @field nickName = contains(StringCard, {
+          computeVia: function(this: Post) {
+            return this.author.firstName + '-poo';
+          }
+        });
+      }
+    `);
+    await realm.write('post.json', JSON.stringify({
+      data: {
+        type: 'card',
+        attributes: {
+          author: {
+            firstName: 'Mango',
+          },
+          title: 'We Need to Go to the Dog Park Now!'
         },
-        title: 'We Need to Go to the Dog Park Now!'
-      },
-      meta: {
-        adoptsFrom: {
-          module: `${testRealmURL}test-cards`,
-          name: 'Post'
+        meta: {
+          adoptsFrom: {
+            module:`${testRealmURL}post`,
+            name: 'Post'
+          }
         }
       }
-    });
+    }));
+    let indexer = realm.searchIndex;
+    await indexer.run();
+    let res = await indexer.card(new URL(`${testRealmURL}post`));
+    if (res?.type === 'error') {
+      throw new Error(res.error.message);
+    }
+    let { resource } = res?.entry!;
+    let card = await createFromSerialized(resource, new URL(testRealmURL), { loader });
 
     await renderComponent(
       class TestDriver extends GlimmerComponent {
@@ -206,12 +227,14 @@ module('Integration | preview', function (hooks) {
       }
     )
 
-    await click('.format-button.edit')
+    await click('.format-button.edit');
     assert.shadowDOM('[data-test-save-card]').doesNotExist();
-
     await waitFor('[data-test-field="title"] input'); // we need to wait for the card instance to load
     await fillIn('[data-test-field="title"] input', 'Why I Whine'); // dirty top level field
     assert.shadowDOM('[data-test-field="title"] input').hasValue('Why I Whine');
+    await waitFor('[data-test-save-card]');
     assert.shadowDOM('[data-test-save-card]').exists();
+
+    Loader.destroy();
   });
 });

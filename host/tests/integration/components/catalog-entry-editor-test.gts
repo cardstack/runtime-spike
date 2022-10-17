@@ -227,6 +227,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
     await fillIn('[data-test-field="name"] input', 'Jackie Wackie');
     await fillIn('[data-test-field="firstName"] input', 'EA');
 
+    await waitFor('[data-test-save-card]');
     await click('button[data-test-save-card]');
     await waitUntil(() => !(document.querySelector('[data-test-saving]')));
 
