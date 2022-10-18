@@ -15,6 +15,7 @@ import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
 import CardEditor from './card-editor';
 import { cardInstance } from '../resources/card-instance';
+import type { Card } from 'https://cardstack.com/base/card-api';
 
 interface Signature {
   Args: {
@@ -51,7 +52,6 @@ export default class CatalogEntryEditor extends Component<Signature> {
                 @card={{this.card.instance}}
                 @onSave={{this.onSave}}
                 @onCancel={{this.onCancel}}
-                @realmURL={{this.localRealm.url.href}}
               />
             </fieldset>
           {{/if}}
@@ -119,8 +119,8 @@ export default class CatalogEntryEditor extends Component<Signature> {
   }
 
   @action
-  onSave(path: string) {
-    this.router.transitionTo({ queryParams: { path }});
+  onSave(card: Card) {
+    this.router.transitionTo({ queryParams: { path: ensureJsonExtension(card.id)}});
   }
 }
 

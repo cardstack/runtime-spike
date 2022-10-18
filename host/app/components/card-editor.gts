@@ -11,7 +11,7 @@ import { registerDestructor } from '@ember/destroyable';
 import { service } from '@ember/service';
 import LoaderService from '../services/loader-service';
 import { importResource } from '../resources/import';
-import { LooseSingleCardDocument,isSingleCardDocument, baseRealm } from '@cardstack/runtime-common';
+import { LooseSingleCardDocument, isSingleCardDocument, baseRealm } from '@cardstack/runtime-common';
 import type { Format } from 'https://cardstack.com/base/card-api';
 import type LocalRealm from '../services/local-realm';
 import Preview from './preview';
@@ -24,9 +24,8 @@ interface Signature {
     card: Card;
     selectedFormat?: Format;
     formats?: Format[];
-    realmURL?: string;
     onCancel?: () => void;
-    onSave?: (url: string) => void;
+    onSave?: (card: Card) => void;
   }
 }
 
@@ -56,6 +55,7 @@ export default class CardEditor extends Component<Signature> {
   @service declare loaderService: LoaderService;
   @service declare localRealm: LocalRealm;
   @tracked format: Format = this.args.selectedFormat ?? 'edit';
+  @tracked card: Card = this.args.card;
   @tracked initialCardData: LooseSingleCardDocument | undefined = undefined;
   private declare interval: ReturnType<typeof setInterval>;
   private lastModified: number | undefined;
@@ -67,11 +67,6 @@ export default class CardEditor extends Component<Signature> {
       this.interval = setInterval(() => taskFor(this.loadData).perform(this.args.card?.id), 1000);
     }
     registerDestructor(this, () => clearInterval(this.interval));
-  }
-
-  @cached
-  get card() {
-    return this.args.card;
   }
 
   private get api() {
@@ -154,7 +149,7 @@ export default class CardEditor extends Component<Signature> {
 
   @restartableTask private async write(): Promise<void> {
     await this.apiModule.loaded;
-    let url = this.args.card.id ?? this.args.realmURL;
+    let url = this.args.card.id ?? this.localRealm.url;
     let method = this.args.card.id ? 'PATCH' : 'POST';
     let currentJSON = await this.currentJSON;
     let response = await this.loaderService.loader.fetch(url, {
@@ -169,24 +164,13 @@ export default class CardEditor extends Component<Signature> {
       throw new Error(`could not save file, status: ${response.status} - ${response.statusText}. ${await response.text()}`);
     }
     let json = await response.json();
+    this.card = await this.api!.createFromSerialized(json.data, this.localRealm.url, { loader: this.loaderService.loader });
 
     // reset our dirty checking to be detect dirtiness from the
     // current JSON to reflect save that just happened
-    this.initialCardData = await this.getComparableCardJson(currentJSON!);
+    this.initialCardData = this.api!.serializeCard(this.card);
 
-    if (json.data.links?.self) {
-      // this is to notify the application route to load a
-      // new source path, so we use the actual .json extension
-      this.doSave(json.data.links.self + '.json');
-    }
-  }
-
-  doSave(path: string) {
-    if (this.args.onSave) {
-      this.args.onSave(path);
-    } else {
-      this.setFormat('isolated')
-    }
+    this.args.onSave?.(this.card);
   }
 
   private async getComparableCardJson(json: LooseSingleCardDocument): Promise<LooseSingleCardDocument | undefined> {

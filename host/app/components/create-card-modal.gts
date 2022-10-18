@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import type { ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
+import { fn } from '@ember/helper';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 //@ts-ignore glint does not think `hash` is consumed-but it is in the template
@@ -8,26 +9,25 @@ import { hash } from '@ember/helper';
 import CardEditor from './card-editor';
 import { registerDestructor } from '@ember/destroyable';
 import { service } from '@ember/service';
+import { Deferred } from '@cardstack/runtime-common/deferred';
 import type LocalRealm from '../services/local-realm';
 import type LoaderService from '../services/loader-service';
 import type RouterService from '@ember/routing/router-service';
-// import { taskFor } from 'ember-concurrency-ts';
-// import { enqueueTask } from 'ember-concurrency'
-// import type { Card } from 'https://cardstack.com/base/card-api';
+import { taskFor } from 'ember-concurrency-ts';
+import { enqueueTask } from 'ember-concurrency'
+import type { Card } from 'https://cardstack.com/base/card-api';
 import { cardInstance, type CardInstance } from '../resources/card-instance';
 
 export default class CreateCardModal extends Component {
   <template>
-    {{#if this.cardRef}}
-      <dialog class="dialog-box" open data-test-create-new-card={{this.cardRef.name}}>
-        <button {{on "click" this.close}} type="button">X Close</button>
-        <h1>Create New Card: {{this.cardRef.name}}</h1>
-        {{#if this.card.instance}}
+    {{#if this.currentRequest.ref}}
+      <dialog class="dialog-box" open data-test-create-new-card={{this.currentRequest.ref.name}}>
+        <button {{on "click" (fn this.save undefined)}} type="button">X Close</button>
+        <h1>Create New Card: {{this.currentRequest.ref.name}}</h1>
+        {{#if this.currentRequest.card.instance}}
           <CardEditor
-            @card={{this.card.instance}}
-            @realmURL={{this.localRealm.url.href}}
-            @onSave={{this.close}}
-            @onCancel={{this.close}}
+            @card={{this.currentRequest.card.instance}}
+            @onSave={{this.save}}
           />
         {{/if}}
       </dialog>
@@ -38,8 +38,11 @@ export default class CreateCardModal extends Component {
   @service declare loaderService: LoaderService;
   @service declare router: RouterService;
 
-  @tracked card: CardInstance | undefined;
-  @tracked cardRef: ExportedCardRef | undefined;
+  @tracked currentRequest: {
+    ref: ExportedCardRef;
+    card: CardInstance;
+    deferred: Deferred<Card | undefined>;
+  } | undefined = undefined;
 
   constructor(owner: unknown, args: {}) {
     super(owner, args);
@@ -49,24 +52,29 @@ export default class CreateCardModal extends Component {
     });
   }
 
-  async create(ref: ExportedCardRef): Promise<void> {
-    this.cardRef = ref;
-    this.card = cardInstance(this, () => ({
-      meta: {
-        adoptsFrom: ref
-      }
-    }));
-    // await taskFor(this._create).perform(ref);
+  async create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    return await taskFor(this._create).perform(ref) as T | undefined;
   }
 
-  // @enqueueTask private async _create(ref: ExportedCardRef): Promise<void> {
-  //   let module: Record<string, any> = await this.loaderService.loader.import(ref.module);
-  //   let Clazz: typeof Card = module[ref.name];
-  //   this.card = new Clazz();
-  // }
+  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    this.currentRequest = {
+      ref,
+      card: cardInstance(this, () => ({ meta: { adoptsFrom: ref }})),
+      deferred: new Deferred(),
+    };
+    let card = await this.currentRequest.deferred.promise;
+    if (card) {
+      return card as T;
+    } else {
+      return undefined;
+    }
+  }
 
-  @action close(): void {
-    this.cardRef = undefined;
+  @action save(card?: Card): void {
+    if (this.currentRequest) {
+      this.currentRequest.deferred.resolve(card);
+      this.currentRequest = undefined;
+    }
   }
 }
 
