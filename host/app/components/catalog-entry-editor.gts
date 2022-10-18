@@ -7,8 +7,6 @@ import { LinkTo } from '@ember/routing';
 import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 import LoaderService from '../services/loader-service';
-//@ts-ignore cached not available yet in definitely typed
-import { cached } from '@glimmer/tracking';
 //@ts-ignore glint does not think this is consumed-but it is consumed in the template
 import { hash } from '@ember/helper';
 import { getSearchResults } from '../resources/search';

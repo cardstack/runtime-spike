@@ -1,23 +1,19 @@
 import Component from '@glimmer/component';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
-//@ts-ignore glint does not think this is consumed-but it is consumed in the template
-import { hash } from '@ember/helper';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { registerDestructor } from '@ember/destroyable';
 import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency';
-import { service } from '@ember/service';
 import type { Card } from 'https://cardstack.com/base/card-api';
-import { type LooseCardResource } from '@cardstack/runtime-common';
+//@ts-ignore cached not available yet in definitely typed
+import { cached } from '@glimmer/tracking';
 import type { Query } from '@cardstack/runtime-common/query';
 import { Deferred } from '@cardstack/runtime-common/deferred';
 import { getSearchResults, Search } from '../resources/search';
-import type LocalRealm from '../services/local-realm';
-import type LoaderService from '../services/loader-service';
+import { cardInstance } from '../resources/card-instance';
 import Preview from './preview';
-import { cardInstance, type CardInstance } from '../resources/card-instance';
 
 export default class CardCatalogModal extends Component {
   <template>
@@ -49,16 +45,16 @@ export default class CardCatalogModal extends Component {
     {{/if}}
   </template>
 
-  @service declare localRealm: LocalRealm;
-  @service declare loaderService: LoaderService;
-
   @tracked currentRequest: {
     search: Search;
     deferred: Deferred<Card | undefined>;
   } | undefined = undefined;
 
-  @tracked instances: LooseCardResource[] | undefined = this.currentRequest?.search.instances;
-  @tracked cardInstances: CardInstance[] | undefined  = this.instances?.map((instance) => cardInstance(this, () => instance));
+  @cached
+  get cardInstances() {
+    return this.currentRequest?.search.instances?.map((instance) => cardInstance(this, () => instance));
+  }
+  @cached
   get cards() {
     return this.cardInstances?.map((c) => c.instance);
   }
@@ -95,7 +91,6 @@ export default class CardCatalogModal extends Component {
     }
   }
 }
-
 
 declare module '@glint/environment-ember-loose/registry' {
   export default interface Registry {

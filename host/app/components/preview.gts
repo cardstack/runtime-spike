@@ -1,6 +1,4 @@
 import Component from '@glimmer/component';
-//@ts-ignore cached not available yet in definitely typed
-import { cached } from '@glimmer/tracking';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -38,17 +36,11 @@ export default class Preview extends Component<Signature> {
 
   @tracked format: Format = this.args.selectedFormat ?? 'isolated';
   @tracked rendered: RenderedCard | undefined;
-
   private renderCardModule = importResource(this, () => `${baseRealm.url}render-card`);
 
   constructor(owner: unknown, args: Signature['Args']) {
     super(owner, args);
     taskFor(this.renderInstance).perform();
-  }
-
-  @cached
-  get card() {
-    return this.args.card;
   }
 
   private get renderCard() {
@@ -72,7 +64,7 @@ export default class Preview extends Component<Signature> {
   @task private async renderInstance(): Promise<void> {
     await this.renderCardModule.loaded;
     if (!this.rendered) {
-      this.rendered = this.renderCard.render(this, () => this.card, () => this.format);
+      this.rendered = this.renderCard.render(this, () => this.args.card, () => this.format);
     }
   }
 }
