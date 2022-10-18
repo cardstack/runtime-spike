@@ -15,7 +15,7 @@ import { getSearchResults } from '../resources/search';
 import LocalRealm from '../services/local-realm';
 import CardEditor from './card-editor';
 import { cardInstance } from '../resources/card-instance';
-import type { Card } from 'https://cardstack.com/base/card-api';
+import type { Card, Format } from 'https://cardstack.com/base/card-api';
 
 interface Signature {
   Args: {
@@ -23,7 +23,7 @@ interface Signature {
   }
 }
 
-const formats = ['isolated', "embedded", "edit"] as ('isolated' | 'embedded' | 'edit')[];
+const formats = ['isolated', "embedded", "edit"] as Format[];
 
 export default class CatalogEntryEditor extends Component<Signature> {
   <template>
@@ -39,6 +39,7 @@ export default class CatalogEntryEditor extends Component<Signature> {
               @formats={{this.formats}}
               @selectedFormat="embedded"
               @card={{this.card.instance}}
+              @onSave={{this.onSave}}
             />
           {{/if}}
         </fieldset>

@@ -4,19 +4,13 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-//@ts-ignore glint does not think `hash` is consumed-but it is in the template
-import { hash } from '@ember/helper';
-import CardEditor from './card-editor';
 import { registerDestructor } from '@ember/destroyable';
-import { service } from '@ember/service';
 import { Deferred } from '@cardstack/runtime-common/deferred';
-import type LocalRealm from '../services/local-realm';
-import type LoaderService from '../services/loader-service';
-import type RouterService from '@ember/routing/router-service';
 import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency'
 import type { Card } from 'https://cardstack.com/base/card-api';
 import { cardInstance, type CardInstance } from '../resources/card-instance';
+import CardEditor from './card-editor';
 
 export default class CreateCardModal extends Component {
   <template>
@@ -33,10 +27,6 @@ export default class CreateCardModal extends Component {
       </dialog>
     {{/if}}
   </template>
-
-  @service declare localRealm: LocalRealm;
-  @service declare loaderService: LoaderService;
-  @service declare router: RouterService;
 
   @tracked currentRequest: {
     ref: ExportedCardRef;
