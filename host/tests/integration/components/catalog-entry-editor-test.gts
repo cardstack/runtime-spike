@@ -308,6 +308,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
             demo: {
               name: 'Jackie',
               lovesWalks: false,
+              owner: {}
             },
           },
           meta: {
@@ -375,6 +376,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
         data: {
           type: 'card',
           attributes: {
+            demo: {},
             title: 'Person',
             description: 'Catalog entry for Person card',
             ref: {

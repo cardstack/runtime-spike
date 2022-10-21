@@ -724,7 +724,6 @@ function serializeCardResource(
   }
   let { id: removedIdField, ...fields } = getFields(model, opts);
   let fieldResources = Object.keys(fields)
-    .filter(fieldName => peekAtField(model, fieldName) !== undefined) // skip over missing fields
     .map(fieldName => serializedGet(model, fieldName, doc));
   return merge({}, ...fieldResources, {
     type: 'card',

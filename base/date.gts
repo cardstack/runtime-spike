@@ -16,7 +16,10 @@ const dateFormat = `yyyy-MM-dd`;
 
 export default class DateCard extends Card {
   static [primitive]: Date;
-  static [serialize](date: Date) {
+  static [serialize](date: Date | undefined) {
+    if (!date) {
+      return;
+    }
     return format(date, dateFormat);
   }
 
