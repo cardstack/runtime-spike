@@ -1,4 +1,4 @@
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import GlimmerComponent from '@glimmer/component';
 import { baseRealm, ExportedCardRef } from '@cardstack/runtime-common';
 import { Loader } from "@cardstack/runtime-common/loader";
@@ -65,15 +65,18 @@ module('Integration | catalog-entry-editor', function (hooks) {
       import { contains, field, Component, Card } from "https://cardstack.com/base/card-api";
       import StringCard from "https://cardstack.com/base/string";
       import BooleanCard from "https://cardstack.com/base/boolean";
+      import DateCard from "https://cardstack.com/base/date";
       import { Person } from "./person";
       export class Pet extends Card {
         @field name = contains(StringCard);
         @field lovesWalks = contains(BooleanCard);
+        @field birthday = contains(DateCard);
         @field owner = contains(Person);
         static embedded = class Embedded extends Component<typeof this> {
           <template>
             <h2 data-test-pet-name><@fields.name/></h2>
             <div data-test-pet-owner><@fields.owner/></div>
+            <div data-test-pet-owner><@fields.birthday/></div>
           </template>
         }
       }
@@ -274,6 +277,18 @@ module('Integration | catalog-entry-editor', function (hooks) {
     let entry = await realm.searchIndex.card(new URL(`${testRealmURL}CatalogEntry/1`));
     assert.ok(entry, 'catalog entry was created');
 
+    await renderComponent(
+      class TestDriver extends GlimmerComponent {
+        <template>
+          <CatalogEntryEditor @ref={{args}} />
+        </template>
+      }
+    );
+
+    await waitFor('[data-test-ref]');
+    await click('[data-test-format-button="edit"]');
+    await assert.shadowDOM('[data-test-field="firstName"] input').exists();
+
     let fileRef = await adapter.openFile('CatalogEntry/1.json');
     if (!fileRef) {
       throw new Error('file not found');
@@ -315,7 +330,10 @@ module('Integration | catalog-entry-editor', function (hooks) {
     );
   });
 
-  skip('can create new catalog entry with all demo field values missing', async function (assert) {
+  test('can create new catalog entry with all demo card field values missing', async function (assert) {
+    let router = this.owner.lookup('service:router') as MockRouter;
+    let deferred = new Deferred<void>();
+    router.initialize(assert, { queryParams: { path: `${testRealmURL}CatalogEntry/1.json`}}, deferred);
     const args: ExportedCardRef =  { module: `${testRealmURL}person`, name: 'Person' };
     await renderComponent(
       class TestDriver extends GlimmerComponent {
@@ -330,7 +348,19 @@ module('Integration | catalog-entry-editor', function (hooks) {
     await waitFor('[data-test-ref]');
 
     await click('button[data-test-save-card]');
-    await waitUntil(() => !(document.querySelector('[data-test-saving]')));
+    await deferred.promise; // wait for the component to transition on save
+
+    await renderComponent(
+      class TestDriver extends GlimmerComponent {
+        <template>
+          <CatalogEntryEditor @ref={{args}} />
+        </template>
+      }
+    );
+
+    await waitFor('[data-test-ref]');
+    await click('[data-test-format-button="edit"]');
+    await assert.shadowDOM('[data-test-field="firstName"] input').exists();
 
     let entry = await realm.searchIndex.card(new URL(`${testRealmURL}CatalogEntry/1`));
     assert.ok(entry, 'catalog entry was created');
@@ -351,7 +381,6 @@ module('Integration | catalog-entry-editor', function (hooks) {
               module: `${testRealmURL}person`,
               name: 'Person'
             },
-            demo: {}
           },
           meta: {
             adoptsFrom: {
