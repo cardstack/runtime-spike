@@ -143,6 +143,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
             demo: {
               name: 'Jackie',
               lovesWalks: true,
+              birthday: null,
               owner: {
                 firstName: 'BN'
               }
@@ -185,6 +186,7 @@ module('Integration | catalog-entry-editor', function (hooks) {
           demo: {
             name: 'Jackie',
             lovesWalks: true,
+            birthday: null,
             owner: {
               firstName: 'BN'
             }
@@ -308,7 +310,10 @@ module('Integration | catalog-entry-editor', function (hooks) {
             demo: {
               name: 'Jackie',
               lovesWalks: false,
-              owner: {}
+              birthday: null,
+              owner: {
+                firstName: null
+              }
             },
           },
           meta: {
@@ -376,7 +381,9 @@ module('Integration | catalog-entry-editor', function (hooks) {
         data: {
           type: 'card',
           attributes: {
-            demo: {},
+            demo: {
+              firstName: null,
+            },
             title: 'Person',
             description: 'Catalog entry for Person card',
             ref: {

@@ -114,7 +114,7 @@ interface Field<CardT extends CardConstructor> {
 }
 
 function callSerializeHook(card: typeof Card, value: any, doc: JSONAPISingleResourceDocument) {
-  if (value !== null) {
+  if (value != null) {
     return card[serialize](value, doc);
   } else {
     return null;
