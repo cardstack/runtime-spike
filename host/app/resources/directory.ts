@@ -23,7 +23,7 @@ export interface Entry {
 
 export class DirectoryResource extends Resource<Args> {
   @tracked entries: Entry[] = [];
-  private interval: ReturnType<typeof setInterval>;
+  //private interval: ReturnType<typeof setInterval>;
   private url: string | undefined;
   private realmPath: RealmPaths;
 
@@ -32,10 +32,10 @@ export class DirectoryResource extends Resource<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    registerDestructor(this, () => {
-      clearInterval(this.interval);
-    });
-    this.interval = setInterval(() => taskFor(this.readdir).perform(), 1000);
+    // registerDestructor(this, () => {
+    //   clearInterval(this.interval);
+    // });
+    //(() => taskFor(this.readdir).perform(), 1000);
     if (!this.localRealm.isAvailable) {
       throw new Error('Local realm is not available');
     }

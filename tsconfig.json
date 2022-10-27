@@ -27,7 +27,10 @@
       "//local-realm/*": ["cards/*"],
       "cards": ["cards/*"],
       "*": ["host/types/*"],
-      "//cdn.skypack.dev/lodash": ["node_modules/@types/lodash"]
+      "//cdn.skypack.dev/lodash": ["node_modules/@types/lodash"],
+      "animations-experiment/*": [
+        "node_modules/animations-experiment/addon/addon"
+      ]
     }
   },
   "glint": {
