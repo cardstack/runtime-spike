@@ -1,0 +1,66 @@
+{
+  "data": {
+    "type": "card",
+    "attributes": {
+      "vendor": {
+        "vendorName": "Smart Contract",
+        "addressLine": "50 California St Ste 1500",
+        "city": "San Francisco",
+        "state": "CA",
+        "zipCode": 94111,
+        "email": "finance@smartcontract.com",
+        "logo": null
+      },
+      "details": {
+        "invoiceNo": "1868",
+        "invoiceDate": "2022-03-04",
+        "dueDate": "2022-04-04",
+        "terms": "Net 30",
+        "invoiceDocument": "Invoice_1868_-_ MatzoShoes.pdf ",
+        "memo": "Cash payment possible"
+      },
+      "lineItems": [
+        {
+          "name": "Reference Contract:ETH-USD (xDAI)",
+          "quantity": 1,
+          "amount": 132,
+          "description": "January - March Activity"
+        },
+        {
+          "name": "Reference Contract:DAI-USD (xDAI)",
+          "quantity": 1,
+          "amount": 3,
+          "description": "January - March Activity"
+        }
+      ],
+      "paymentMethods": [
+        {
+          "currencyName": "USD",
+          "value": "$135.00 USD",
+          "isPrimaryMethod": false
+        },
+        {
+          "currencyName": "USDC",
+          "value": "135 USDC",
+          "isPrimaryMethod": false
+        },
+        {
+          "currencyName": "DAI",
+          "value": "135 DAI",
+          "isPrimaryMethod": false
+        },
+        {
+          "currencyName": "LINK",
+          "value": "7.46 LINK",
+          "isPrimaryMethod": true
+        }
+      ]
+    },
+    "meta": {
+      "adoptsFrom": {
+        "module": "http://local-realm/invoice-packet",
+        "name": "InvoicePacket"
+      }
+    }
+  }
+}
