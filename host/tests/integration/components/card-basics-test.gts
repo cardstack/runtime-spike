@@ -1,8 +1,8 @@
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import waitUntil from '@ember/test-helpers/wait-until';
 import { renderCard } from '../../helpers/render-component';
-import { cleanWhiteSpace, p, testRealmURL, shimModule, setupCardLogs } from '../../helpers';
+import { cleanWhiteSpace, p, testRealmURL, shimModule, setupCardLogs, saveCard } from '../../helpers';
 import parseISO from 'date-fns/parseISO';
 import { on } from '@ember/modifier';
 import { baseRealm, } from "@cardstack/runtime-common";
@@ -93,7 +93,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('access @model for primitive and composite fields', async function (assert) {
-    let {field, contains, containsMany, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, containsMany, Card, Component } = cardApi;
     let { default: StringCard} = string;
     let { default: IntegerCard} = integer;
     let { default: BooleanCard } = boolean;
@@ -119,24 +119,14 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let helloWorld = await createFromSerialized(Post, {
-      data: {
-        attributes: {
-          title: 'First Post',
-          author: {
-            firstName: 'Arthur',
-            subscribers: 5,
-            isCool: true,
-            languagesSpoken: ['english', 'japanese']
-          },
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
+    let helloWorld = new Post({
+      title: 'First Post',
+      author: new Person({
+        firstName: 'Arthur',
+        subscribers: 5,
+        isCool: true,
+        languagesSpoken: ['english', 'japanese']
+      }),
     });
 
     let cardRoot = await renderCard(helloWorld, 'isolated');
@@ -171,7 +161,9 @@ module('Integration | card-basics', function (hooks) {
     let arthur = new Person({ firstName: 'Arthur', number: 10 });
 
     await renderCard(arthur, 'embedded');
+    assert.shadowDOM('[data-test="name"]').exists();
     assert.shadowDOM('[data-test="name"]').containsText('Arthur');
+    assert.shadowDOM('[data-test="integer"]').exists();
     assert.shadowDOM('[data-test="integer"]').containsText('10');
   });
 
@@ -238,6 +230,7 @@ module('Integration | card-basics', function (hooks) {
     let driver = new DriverCard({ ref });
 
     await renderCard(driver, 'embedded');
+    assert.shadowDOM('[data-test-ref]').exists();
     assert.shadowDOM('[data-test-ref]').containsText(`Module: http://localhost:4201/test/person Name: Person`);
 
     // is this worth an assertion? or is it just obvious?
@@ -259,6 +252,7 @@ module('Integration | card-basics', function (hooks) {
 
     await renderCard(driver, 'edit');
     assert.shadowDOM('input').doesNotExist('no input fields exist');
+    assert.shadowDOM('[data-test-ref').exists();
     assert.shadowDOM('[data-test-ref').containsText(`Module: http://localhost:4201/test/person Name: Person`);
   });
 
@@ -321,46 +315,65 @@ module('Integration | card-basics', function (hooks) {
     }
   });
 
-  skip('can render a linksTo field');
+  test('can render a linksTo field', async function (assert) {
+    let { field, contains, linksTo, Card, Component } = cardApi;
+    let { default: StringCard } = string;
+
+    class Pet extends Card {
+      @field firstName = contains(StringCard);
+      @field friend = linksTo(() => Pet)
+      static embedded = class Embedded extends Component<typeof this> {
+        <template>
+          <div data-test-pet={{@model.firstName}}>
+            <@fields.firstName/>
+            <@fields.friend/>
+          </div>
+        </template>
+      }
+    }
+    class Person extends Card {
+      @field firstName = contains(StringCard);
+      @field pet = linksTo(Pet)
+      static embedded = class Embedded extends Component<typeof this> {
+        <template>
+          <div data-test-person><@fields.firstName/><@fields.pet/></div>
+        </template>
+      }
+    }
+    await shimModule(`${testRealmURL}test-cards`, { Person, Pet });
+
+    let vanGogh = new Pet({ firstName: 'Van Gogh' });
+    let mango = new Pet({ firstName: 'Mango', friend: vanGogh });
+    let hassan = new Person({ firstName: 'Hassan', pet: mango });
+    await saveCard(vanGogh, `${testRealmURL}Pet/vanGogh`);
+    await saveCard(mango, `${testRealmURL}Pet/mango`);
+    await renderCard(hassan, 'embedded');
+
+    assert.shadowDOM('[data-test-person]').exists();
+    assert.shadowDOM('[data-test-person]').containsText('Hassan');
+    assert.shadowDOM('[data-test-pet="Mango"]').exists();
+    assert.shadowDOM('[data-test-pet="Mango"]').containsText('Mango');
+    assert.shadowDOM('[data-test-pet="Van Gogh"]').exists();
+    assert.shadowDOM('[data-test-pet="Van Gogh"]').containsText('Van Gogh');
+  });
 
   test('catalog entry isPrimitive indicates if the catalog entry is a primitive field card', async function (assert) {
-    let { createFromSerialized } = cardApi;
     let { CatalogEntry } = catalogEntry;
 
-    let nonPrimitiveEntry = await createFromSerialized<typeof CatalogEntry>({
-      data: {
-        attributes: {
-          title: "CatalogEntry Card",
-          ref: {
-            module: "https://cardstack.com/base/catalog-entry",
-            name: "CatalogEntry"
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${baseRealm.url}catalog-entry`,
-            name: 'CatalogEntry'
-          }
-        }
+    let nonPrimitiveEntry = new CatalogEntry({
+      title: "CatalogEntry Card",
+      ref: {
+        module: "https://cardstack.com/base/catalog-entry",
+        name: "CatalogEntry"
       }
-    }, undefined);
-    let primitiveEntry = await createFromSerialized<typeof CatalogEntry>({
-      data: {
-        attributes: {
-          title: "String Card",
-          ref: {
-            module: "https://cardstack.com/base/string",
-            name: "default"
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${baseRealm.url}catalog-entry`,
-            name: 'CatalogEntry'
-          }
-        }
+    });
+    let primitiveEntry = new CatalogEntry({
+      title: "String Card",
+      ref: {
+        module: "https://cardstack.com/base/string",
+        name: "default"
       }
-    }, undefined);
+    });
 
     await cardApi.recompute(nonPrimitiveEntry);
     await cardApi.recompute(primitiveEntry);
@@ -370,7 +383,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('render whole composite field', async function (assert) {
-    let {field, contains, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, Card, Component } = cardApi;
     let { default: StringCard} = string;
     let { default: IntegerCard} = integer;
     class Person extends Card {
@@ -390,65 +403,20 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let helloWorld = await createFromSerialized({
-      data: {
-        attributes: {
-          author: {
-            firstName: 'Arthur',
-            title: 'Mr',
-            number: 10
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let helloWorld = new Post({
+      author: new Person({
+        firstName: 'Arthur',
+        title: 'Mr',
+        number: 10
+      })
+    });
     await renderCard(helloWorld, 'isolated');
+    assert.shadowDOM('[data-test-embedded-person]').exists();
     assert.shadowDOM('[data-test-embedded-person]').containsText('Mr Arthur 10');
   });
 
-  // this will apply to linksTo, but doesn't apply to contains
-  skip('render a field that is the enclosing card', async function(assert) {
-    let {field, contains,  Card, Component, createFromSerialized } = cardApi;
-    let { default: StringCard} = string;
-    class Person extends Card {
-      @field firstName = contains(StringCard);
-      // @field friend = contains(() => Person); // a thunk can be used to specify a circular reference
-      // static isolated = class Isolated extends Component<typeof this> {
-      //   <template><@fields.firstName/> friend is <@fields.friend/></template>
-      // }
-      static embedded = class Embedded extends Component<typeof this> {
-        <template><@fields.firstName/></template>
-      }
-    }
-    await shimModule(`${testRealmURL}test-cards`, { Person });
-
-    let mango = await createFromSerialized({
-      data: {
-        attributes: {
-          firstName: 'Mango',
-          friend: {
-            firstName: 'Van Gogh'
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Person'
-          }
-        }
-      }
-    }, undefined);
-    await renderCard(mango, 'isolated');
-    assert.strictEqual(cleanWhiteSpace(this.element.textContent!), 'Mango friend is Van Gogh');
-  });
-
   test('render nested composite field', async function (assert) {
-    let {field, contains, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, Card, Component } = cardApi;
     class TestString extends Card {
       static [primitive]: string;
       static embedded = class Embedded extends Component<typeof this> {
@@ -477,30 +445,18 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person, TestInteger, TestString });
 
-    let helloWorld = await createFromSerialized({
-      data: {
-        attributes: {
-          author: {
-            firstName: 'Arthur',
-            number: 10
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let helloWorld = new Post({
+      author: new Person({ firstName: 'Arthur', number: 10 })
+    });
 
     await renderCard(helloWorld, 'isolated');
+    assert.shadowDOM('[data-test="string"]').exists();
     assert.shadowDOM('[data-test="string"]').containsText('Arthur');
     assert.shadowDOM('[data-test="integer"]').containsText('10');
   });
 
   test('render default isolated template', async function (assert) {
-    let {field, contains, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, Card, Component } = cardApi;
     let firstName = await testString('first-name');
     class Person extends Card {
       @field firstName = contains(firstName);
@@ -517,25 +473,15 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let helloWorld = await createFromSerialized({
-      data: {
-        attributes: {
-          title: 'First Post',
-          author: {
-            firstName: 'Arthur'
-          }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let helloWorld = new Post({
+      title: 'First Post',
+      author: new Person({ firstName: 'Arthur' })
+    });
 
     await renderCard(helloWorld, 'isolated');
+    assert.shadowDOM('[data-test="first-name"]').exists();
     assert.shadowDOM('[data-test="first-name"]').containsText('Arthur');
+    assert.shadowDOM('[data-test="title"]').exists();
     assert.shadowDOM('[data-test="title"]').containsText('First Post');
   });
 
@@ -574,7 +520,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('render a containsMany composite field', async function (assert) {
-    let {field, contains, containsMany, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, containsMany, Card, Component } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -591,26 +537,16 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Family, Person });
 
-    let abdelRahmans = await createFromSerialized({
-      data: {
-        attributes: {
-          people: [
-            { firstName: 'Mango'},
-            { firstName: 'Van Gogh'},
-            { firstName: 'Hassan'},
-            { firstName: 'Mariko'},
-            { firstName: 'Yume'},
-            { firstName: 'Sakura'},
-          ]
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Family'
-          }
-        }
-      }
-    }, undefined);
+    let abdelRahmans = new Family({
+      people: [
+        new Person({ firstName: 'Mango'}),
+        new Person({ firstName: 'Van Gogh'}),
+        new Person({ firstName: 'Hassan'}),
+        new Person({ firstName: 'Mariko'}),
+        new Person({ firstName: 'Yume'}),
+        new Person({ firstName: 'Sakura'}),
+      ]
+    });
 
     await renderCard(abdelRahmans, 'isolated');
     assert.deepEqual(
@@ -671,9 +607,13 @@ module('Integration | card-basics', function (hooks) {
       ]
     });
     await renderCard(group, 'isolated');
+    assert.shadowDOM('[data-test-employee-firstName]').exists();
     assert.shadowDOM('[data-test-employee-firstName]').containsText('Mango');
+    assert.shadowDOM('[data-test-employee-department]').exists();
     assert.shadowDOM('[data-test-employee-department]').containsText('begging');
+    assert.shadowDOM('[data-test-customer-firstName]').exists();
     assert.shadowDOM('[data-test-customer-firstName]').containsText('Van Gogh');
+    assert.shadowDOM('[data-test-customer-billAmount]').exists();
     assert.shadowDOM('[data-test-customer-billAmount]').containsText('100');
   });
 
@@ -688,6 +628,7 @@ module('Integration | card-basics', function (hooks) {
     }
     let child = new Person({ firstName: 'Arthur' });
     let root = await renderCard(child, 'embedded');
+    assert.dom(root.children[0]).exists();
     assert.dom(root.children[0]).containsText('Arthur');
     child.firstName = 'Quint';
     await waitUntil(() => cleanWhiteSpace(root.textContent!) === 'Quint');
@@ -767,7 +708,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('throws if contains many value is set with a non-array', async function(assert) {
-    let {field, contains, containsMany, Card, createFromSerialized } = cardApi;
+    let {field, contains, containsMany, Card } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -776,19 +717,7 @@ module('Integration | card-basics', function (hooks) {
     await shimModule(`${testRealmURL}test-cards`, { Person });
     assert.throws(() => new Person({ languagesSpoken: 'english' }), /Expected array for field value languagesSpoken/);
     try {
-      await createFromSerialized({
-        data: {
-          attributes: {
-            languagesSpoken: 'english'
-          },
-          meta: {
-            adoptsFrom: {
-              module: `${testRealmURL}test-cards`,
-              name: 'Person'
-            }
-          }
-        }
-      }, undefined);
+      new Person({ languagesSpoken: 'english' });
       throw new Error(`expected exception to be thrown`);
     } catch (err: any) {
       assert.ok(err.message.match(/Expected array for field value languagesSpoken/), 'expected error received')
@@ -796,7 +725,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('render default edit template', async function (assert) {
-    let {field, contains, Card, createFromSerialized } = cardApi;
+    let {field, contains, Card } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -808,20 +737,10 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let helloWorld = await createFromSerialized({
-      data: {
-        attributes: {
-          title: 'My Post',
-          author: { firstName: 'Arthur' }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let helloWorld = new Post({
+      title: 'My Post',
+      author: new Person({ firstName: 'Arthur' })
+    });
 
     await renderCard(helloWorld, 'edit');
     assert.shadowDOM('[data-test-field="title"]').hasText('Title');
@@ -837,7 +756,7 @@ module('Integration | card-basics', function (hooks) {
   });
 
   test('renders field name for boolean default view values', async function (assert) {
-    let {field, contains, Card, createFromSerialized } = cardApi;
+    let {field, contains, Card } = cardApi;
     let { default: StringCard} = string;
     let { default: BooleanCard } = boolean;
 
@@ -847,26 +766,13 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Person });
 
-    let mango = await createFromSerialized({
-      data: {
-        attributes: {
-          firstName: 'Mango',
-          isCool: true
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Person'
-          }
-        }
-      }
-    }, undefined);
+    let mango = new Person({ firstName: 'Mango', isCool: true });
     let root = await renderCard(mango, 'isolated');
     assert.strictEqual(cleanWhiteSpace(root.textContent!), 'Mango isCool: true');
   });
 
   test('renders boolean edit view', async function(assert) {
-    let {field, contains, Card, createFromSerialized } = cardApi;
+    let {field, contains, Card } = cardApi;
     let { default: StringCard} = string;
     let { default: BooleanCard } = boolean;
 
@@ -876,21 +782,7 @@ module('Integration | card-basics', function (hooks) {
       @field isHuman = contains(BooleanCard);
     }
     await shimModule(`${testRealmURL}test-cards`, { Person });
-    let mango = await createFromSerialized<typeof Person>({
-      data: {
-        attributes: {
-          firstName: 'Mango',
-          isCool: true,
-          isHuman: false
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Person'
-          }
-        }
-      }
-    }, undefined);
+    let mango = new Person({ firstName: 'Mango', isCool: true, isHuman: false });
 
     const TRUE = 0;
     const FALSE = 1;
@@ -930,12 +822,14 @@ module('Integration | card-basics', function (hooks) {
     let hassan = new Person ({ firstName: 'Hassan', species: 'Homo Sapiens' });
 
     await renderCard(hassan, 'embedded');
+    assert.shadowDOM('[data-test="first-name"]').exists();
     assert.shadowDOM('[data-test="first-name"]').containsText('Hassan');
+    assert.shadowDOM('[data-test="species"]').exists();
     assert.shadowDOM('[data-test="species"]').containsText('Homo Sapiens');
   });
 
   test('can edit primitive and composite fields', async function (assert) {
-    let {field, contains, Card, Component, createFromSerialized } = cardApi;
+    let {field, contains, Card, Component } = cardApi;
     let { default: StringCard} = string;
     let { default: IntegerCard} = integer;
     class Person extends Card {
@@ -965,21 +859,11 @@ module('Integration | card-basics', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let helloWorld = await createFromSerialized({
-      data: {
-        attributes: {
-          title: 'First Post',
-          reviews: 1,
-          author: { firstName: 'Arthur' }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let helloWorld = new Post({
+      title: 'First Post',
+      reviews: 1,
+      author: new Person({ firstName: 'Arthur' })
+    });
 
     await renderCard(helloWorld, 'edit');
     assert.shadowDOM('[data-test-field="title"] input').hasValue('First Post');

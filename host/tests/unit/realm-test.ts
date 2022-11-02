@@ -16,6 +16,7 @@ import {
 import { stringify } from 'qs';
 import { baseRealm } from '@cardstack/runtime-common';
 import { Loader } from '@cardstack/runtime-common/loader';
+import '@cardstack/runtime-common/helpers/code-equality-assertion';
 
 module('Unit | realm', function (hooks) {
   setupCardLogs(
@@ -576,6 +577,35 @@ module('Unit | realm', function (hooks) {
         },
       ],
     });
+    let fileRef = await adapter.openFile('Pet/1.json');
+    if (!fileRef) {
+      throw new Error('file not found');
+    }
+    assert.deepEqual(
+      JSON.parse(fileRef.content as string),
+      {
+        data: {
+          type: 'card',
+          attributes: {
+            firstName: 'Mango',
+          },
+          relationships: {
+            owner: {
+              links: {
+                self: `${testRealmURL}dir/owner`,
+              },
+            },
+          },
+          meta: {
+            adoptsFrom: {
+              module: 'http://localhost:4201/test/pet',
+              name: 'Pet',
+            },
+          },
+        },
+      },
+      'file contents are correct'
+    );
   });
 
   test('realm can serve patch card requests', async function (assert) {
@@ -854,6 +884,35 @@ module('Unit | realm', function (hooks) {
         },
       ],
     });
+    let fileRef = await adapter.openFile('dir/mango.json');
+    if (!fileRef) {
+      throw new Error('file not found');
+    }
+    assert.deepEqual(
+      JSON.parse(fileRef.content as string),
+      {
+        data: {
+          type: 'card',
+          attributes: {
+            firstName: 'Mango',
+          },
+          relationships: {
+            owner: {
+              links: {
+                self: `${testRealmURL}dir/mariko`,
+              },
+            },
+          },
+          meta: {
+            adoptsFrom: {
+              module: 'http://localhost:4201/test/pet',
+              name: 'Pet',
+            },
+          },
+        },
+      },
+      'file contents are correct'
+    );
   });
 
   test('realm can serve delete card requests', async function (assert) {
@@ -1069,7 +1128,7 @@ module('Unit | realm', function (hooks) {
     let response = await realm.handle(new Request(`${testRealmURL}dir/person`));
     assert.strictEqual(response.status, 200, 'HTTP 200 status code');
     let compiledJS = await response.text();
-    assert.strictEqual(compiledJS, compiledCard(), 'compiled card is correct');
+    assert.codeEqual(compiledJS, compiledCard(), 'compiled card is correct');
   });
 
   test('realm can serve compiled js file when requested with file extension ', async function (assert) {
@@ -1082,7 +1141,7 @@ module('Unit | realm', function (hooks) {
     );
     assert.strictEqual(response.status, 200, 'HTTP 200 status code');
     let compiledJS = await response.text();
-    assert.strictEqual(compiledJS, compiledCard(), 'compiled card is correct');
+    assert.codeEqual(compiledJS, compiledCard(), 'compiled card is correct');
   });
 
   test('realm can serve file asset (not card source, not js, not JSON-API)', async function (assert) {

@@ -15,6 +15,9 @@ button {
 .file-tree + div {
   flex-grow: 3;
 }
+.polling-button {
+  margin-top: 3rem;
+}
 .preview {
   flex-grow: 2;
   min-width: 10rem;
@@ -78,6 +81,11 @@ button {
   width: 50vw;
   min-height: 50vh;
   overflow-y: auto;
+}
+
+.dialog-box.card-catalog-dialog {
+  /* Need to overlay on top of the create card dialog when both appear */
+  z-index:2;
 }
 
 .dialog-box > * + * {

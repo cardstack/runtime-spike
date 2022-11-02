@@ -64,7 +64,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a computed that consumes a nested property', async function(assert) {
-    let { field, contains, Card, Component, createFromSerialized } = cardApi;
+    let { field, contains, Card, Component } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -80,20 +80,10 @@ module('Integration | computeds', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let firstPost = await createFromSerialized({
-      data: {
-        attributes: {
-          title: 'First Post',
-          author: { firstName: 'Mango' }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let firstPost = new Post({
+      title: 'First Post',
+      author: new Person({ firstName: 'Mango' })
+    });
     let root = await renderCard(firstPost, 'isolated');
     assert.strictEqual(root.textContent!.trim(), 'First Post by Mango');
   });
@@ -188,7 +178,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a nested asynchronous computed field', async function(assert) {
-    let { field, contains, Card, Component, createFromSerialized } = cardApi;
+    let { field, contains, Card, Component } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -208,20 +198,10 @@ module('Integration | computeds', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Post, Person });
 
-    let firstPost = await createFromSerialized({
-      data: {
-        attributes: {
-          title: 'First Post',
-          author: { firstName: 'Mango' }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Post'
-          }
-        }
-      }
-    }, undefined);
+    let firstPost = new Post({
+      title: 'First Post',
+      author: new Person({ firstName: 'Mango' })
+    });
     let root = await renderCard(firstPost, 'isolated');
     assert.strictEqual(cleanWhiteSpace(root.textContent!), 'First Post by Mango');
   });
@@ -302,7 +282,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can render a containsMany computed composite field', async function(assert) {
-    let { field, contains, containsMany, Card, Component, createFromSerialized } = cardApi;
+    let { field, contains, containsMany, Card, Component } = cardApi;
     let { default: StringCard} = string;
     class Person extends Card {
       @field firstName = contains(StringCard);
@@ -324,26 +304,16 @@ module('Integration | computeds', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Family, Person });
 
-    let abdelRahmans = await createFromSerialized({
-      data: {
-        attributes: {
-          people: [
-            { firstName: 'Mango'},
-            { firstName: 'Van Gogh'},
-            { firstName: 'Hassan'},
-            { firstName: 'Mariko'},
-            { firstName: 'Yume'},
-            { firstName: 'Sakura'},
-          ]
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards` ,
-            name: 'Family'
-          }
-        }
-      }
-    }, undefined);
+    let abdelRahmans = new Family({
+      people: [
+        new Person({ firstName: 'Mango'}),
+        new Person({ firstName: 'Van Gogh'}),
+        new Person({ firstName: 'Hassan'}),
+        new Person({ firstName: 'Mariko'}),
+        new Person({ firstName: 'Yume'}),
+        new Person({ firstName: 'Sakura'}),
+      ]
+    });
 
     await renderCard(abdelRahmans, 'isolated');
     assert.deepEqual(
@@ -379,7 +349,7 @@ module('Integration | computeds', function (hooks) {
   });
 
   test('can recompute containsMany field', async function(assert) {
-    let { field, contains, containsMany, Card, createFromSerialized, recompute } = cardApi;
+    let { field, contains, containsMany, Card, recompute } = cardApi;
     let { default: StringCard} = string;
     let { default: IntegerCard} = integer;
 
@@ -398,25 +368,12 @@ module('Integration | computeds', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Family, Person });
 
-    let family = await createFromSerialized<typeof Family>({
-      data: {
-        attributes: {
-          people: [{
-            firstName: "Mango",
-            age: 3
-          }, {
-            firstName: "Van Gogh",
-            age: 6
-          }]
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Family'
-          }
-        }
-      }
-    }, undefined);
+    let family = new Family({
+      people: [
+        new Person({ firstName: "Mango", age: 3 }),
+        new Person({ firstName: "Van Gogh", age: 6 })
+      ]
+    });
     await recompute(family);
     assert.strictEqual(family.totalAge, 9, 'computed is correct');
     family.people[0].age = 4;
@@ -436,17 +393,18 @@ module('Integration | computeds', function (hooks) {
 
     let person = new Person({ firstName: 'Mango' });
     await renderCard(person, 'edit');
+    assert.shadowDOM('[data-test-field=alias]').exists();
     assert.shadowDOM('[data-test-field=alias]').containsText('Mango');
     assert.shadowDOM('[data-test-field=alias] input').doesNotExist('input field not rendered for computed')
   });
 
   test('can maintain data consistency for async computed fields', async function(assert) {
-    let { field, contains, Card, Component, createFromSerialized } = cardApi;
+    let { field, contains, Card, Component } = cardApi;
     let { default: StringCard} = string;
     class Location extends Card {
       @field city = contains(StringCard);
       static embedded = class Embedded extends Component<typeof this> {
-        <template><span><@fields.city/></span></template>
+        <template><span data-test-location><@fields.city/></span></template>
       }
     }
     class Person extends Card {
@@ -475,22 +433,13 @@ module('Integration | computeds', function (hooks) {
     }
     await shimModule(`${testRealmURL}test-cards`, { Location, Person });
 
-    let person = await createFromSerialized({
-      data: {
-        attributes: {
-          firstName: 'Mango',
-          homeTown: { city: 'Bronxville' }
-        },
-        meta: {
-          adoptsFrom: {
-            module: `${testRealmURL}test-cards`,
-            name: 'Person'
-          }
-        }
-      }
-     }, undefined);
+    let person = new Person({
+      firstName: 'Mango',
+      homeTown: new Location({ city: 'Bronxville' })
+    });
 
     await renderCard(person, 'edit');
+    assert.shadowDOM('[data-test-field="slowName"]').exists();
     assert.shadowDOM('[data-test-field="slowName"]').containsText('Mango');
     await fillIn('[data-test-field="firstName"] input', 'Van Gogh');
     // We want to ensure data consistency, so that when the template rerenders,
@@ -498,14 +447,18 @@ module('Integration | computeds', function (hooks) {
     await waitUntil(() =>
       shadowQuerySelector('[data-test-dep-field="firstName"]')?.textContent?.includes('Van Gogh')
     );
+    assert.shadowDOM('[data-test-field="slowName"]').exists();
     assert.shadowDOM('[data-test-field="slowName"]').containsText('Van Gogh');
 
-    assert.shadowDOM('[data-test-field="slowHomeTown"] span').containsText('Bronxville');
+    // this targets the slowHomeTown field which is the only Location card rendered in a nested shadow root
+    assert.shadowDOM('[data-test-location]').exists();
+    assert.shadowDOM('[data-test-location]').containsText('Bronxville');
     await fillIn('[data-test-field="homeTown"] input', 'Scarsdale');
     await waitUntil(() =>
       shadowQuerySelector('[data-test-dep-field="homeTown"]')?.textContent?.includes('Scarsdale')
     );
-    assert.shadowDOM('[data-test-field="slowHomeTown"] span').containsText('Scarsdale');
+    assert.shadowDOM('[data-test-location]').exists();
+    assert.shadowDOM('[data-test-location]').containsText('Scarsdale');
   });
 
   skip('can render a computed linksTo relationship');

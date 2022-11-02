@@ -1,14 +1,17 @@
 import GlimmerComponent from '@glimmer/component';
-import { ComponentLike } from '@glint/template';
+import type { ComponentLike } from '@glint/template';
 import { NotReady, isNotReadyError} from './not-ready';
 import { flatMap, startCase, merge } from 'lodash';
 import { TrackedWeakMap } from 'tracked-built-ins';
 import { WatchedArray } from './watched-array';
 import { flatten } from "flat";
 import { on } from '@ember/modifier';
+import { fn } from '@ember/helper';
 import { pick } from './pick';
 import ShadowDOM from 'https://cardstack.com/base/shadow-dom';
 import { initStyleSheet, attachStyles } from 'https://cardstack.com/base/attach-styles';
+import { restartableTask } from 'ember-concurrency';
+import { taskFor } from 'ember-concurrency-ts';
 import {
   Deferred,
   isCardResource,
@@ -18,6 +21,8 @@ import {
   isNotLoadedError,
   CardError,
   NotLoaded,
+  chooseCard,
+  baseCardRef,
   type Meta,
   type CardFields,
   type Relationship,
@@ -301,7 +306,6 @@ class ContainsMany<FieldT extends CardConstructor> implements Field<FieldT> {
         <template>
           <ContainsManyEditor
             @model={{model}}
-            @fieldName={{fieldName}}
             @arrayField={{arrayField}}
             @field={{field}}
             @format={{format}}
@@ -408,16 +412,8 @@ class Contains<CardT extends CardConstructor> implements Field<CardT> {
     return value;
   }
 
-  component(model: Box<Card>, format: Format) {
-    let fieldName = this.name as keyof Card;
-    let card: typeof Card;
-    if (primitive in this.card) {
-      card = this.card;
-    } else {
-      card = model.value[fieldName].constructor as typeof Card;
-    }
-    let innerModel = model.field(fieldName) as unknown as Box<Card>;
-    return getBoxComponent(card, format, innerModel);
+  component(model: Box<Card>, format: Format): ComponentLike<{ Args: {}, Blocks: {} }> {
+    return fieldComponent(this, model, format);
   }
 }
 
@@ -517,9 +513,30 @@ class LinksTo<CardT extends CardConstructor> implements Field<CardT> {
     return value;
   }
 
-  component(_model: Box<Card>, _format: Format): ComponentLike<{ Args: {}, Blocks: {} }> {
-    throw new Error('not implemented');
+  component(model: Box<Card>, format: Format): ComponentLike<{ Args: {}, Blocks: {} }> {
+    if (format === 'edit') {
+      let field = this;
+      let innerModel = model.field(this.name as keyof Card) as unknown as Box<Card>;
+      return class LinksToEditTemplate extends GlimmerComponent {
+        <template>
+          <LinksToEditor @model={{innerModel}} @field={{field}} />
+        </template>
+      };
+    }
+    return fieldComponent(this, model, format);
   }
+}
+
+function fieldComponent(field: Field<typeof Card>, model: Box<Card>, format: Format): ComponentLike<{ Args: {}, Blocks: {} }> {
+  let fieldName = field.name as keyof Card;
+  let card: typeof Card;
+  if (primitive in field.card) {
+    card = field.card;
+  } else {
+    card = model.value[fieldName]?.constructor as typeof Card ?? field.card;
+  }
+  let innerModel = model.field(fieldName) as unknown as Box<Card>;
+  return getBoxComponent(card, format, innerModel);
 }
 
 // our decorators are implemented by Babel, not TypeScript, so they have a
@@ -1008,8 +1025,10 @@ let editStyles = initStyleSheet(`
 class DefaultIsolated extends GlimmerComponent<{ Args: { model: Card; fields: Record<string, new() => GlimmerComponent>}}> {
   <template>
     <div {{attachStyles defaultStyles}}>
-      {{#each-in @fields as |_key Field|}}
-        <Field />
+      {{#each-in @fields as |key Field|}}
+        {{#unless (eq key 'id')}}
+          <Field />
+        {{/unless}}
       {{/each-in}}
     </div>
   </template>;
@@ -1396,14 +1415,10 @@ function eq<T>(a: T, b: T, _namedArgs: unknown): boolean {
   return a === b;
 }
 
-import { action } from '@ember/object';
-import { fn } from '@ember/helper';
-
 interface ContainsManySignature {
   Args: {
-    model: Box<Card>,
-    fieldName: keyof Card,
-    arrayField: Box<Card[]>,
+    model: Box<Card>;
+    arrayField: Box<Card[]>;
     format: Format;
     field: Field<typeof Card>;
   };
@@ -1411,8 +1426,8 @@ interface ContainsManySignature {
 
 class ContainsManyEditor extends GlimmerComponent<ContainsManySignature> {
   <template>
-    <section data-test-contains-many={{this.safeFieldName}}>
-      <header>{{this.safeFieldName}}</header>
+    <section data-test-contains-many={{this.args.field.name}}>
+      <header>{{this.args.field.name}}</header>
       <ul>
         {{#each @arrayField.children as |boxedElement i|}}
           <li data-test-item={{i}}>
@@ -1427,20 +1442,75 @@ class ContainsManyEditor extends GlimmerComponent<ContainsManySignature> {
     </section>
   </template>
 
-  get safeFieldName() {
-    if (typeof this.args.fieldName !== 'string') {
-      throw new Error(`ContainsManyEditor expects a string fieldName`);
-    }
-    return this.args.fieldName;
-  }
-
-  @action add() {
+  add = () => {
     // TODO probably each field card should have the ability to say what a new item should be
     let newValue = primitive in this.args.field.card ? null : new this.args.field.card();
-    (this.args.model.value as any)[this.safeFieldName].push(newValue);
+    (this.args.model.value as any)[this.args.field.name].push(newValue);
   }
 
-  @action remove(index: number) {
-    (this.args.model.value as any)[this.safeFieldName].splice(index, 1);
+  remove = (index: number) => {
+    (this.args.model.value as any)[this.args.field.name].splice(index, 1);
   }
 }
+
+interface LinksToEditorSignature {
+  Args: {
+    model: Box<Card | null>;
+    field: Field<typeof Card>;
+  }
+}
+class LinksToEditor extends GlimmerComponent<LinksToEditorSignature> {
+  <template>
+    <button {{on "click" this.choose}} data-test-choose-card>Choose</button>
+    <button {{on "click" this.remove}} data-test-remove-card disabled={{this.isEmpty}}>Remove</button>
+    {{#if this.isEmpty}}
+      <div data-test-empty-link>[empty]</div>
+    {{else}}
+      <this.linkedCard/>
+    {{/if}}
+  </template>
+
+  choose = () => {
+    taskFor(this.chooseCard).perform();
+  }
+
+  remove = () => {
+    this.args.model.value = null;
+  }
+
+  get isEmpty() {
+    return this.args.model.value == null;
+  }
+
+  get linkedCard() {
+    if (this.args.model.value == null) {
+      throw new Error(`can't make field component with box value of null for field ${field.name}`);
+    }
+    let card = Reflect.getPrototypeOf(this.args.model.value)!.constructor as typeof Card;
+    return getBoxComponent(card, 'embedded', this.args.model as Box<Card>);
+  }
+
+  @restartableTask private async chooseCard(this: LinksToEditor) {
+    let currentlyChosen = !this.isEmpty ? (this.args.model.value as any)["id"] as string : undefined;
+    let type = Loader.identify(this.args.field.card) ?? baseCardRef;
+    let chosenCard = await chooseCard(
+      {
+        filter: {
+          every: [
+            { type },
+            // omit the currently chosen card from the chooser
+            ...(currentlyChosen ? [{
+              not: {
+                eq: { id: currentlyChosen },
+                on: baseCardRef,
+              }
+            }] : [])
+          ]
+        }
+      }
+    );
+    if (chosenCard) {
+      this.args.model.value = chosenCard;
+    }
+  }
+};
