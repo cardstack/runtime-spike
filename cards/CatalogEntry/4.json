@@ -2,25 +2,40 @@
   "data": {
     "type": "card",
     "attributes": {
-      "title": "LineItem",
-      "description": "Catalog entry for LineItem card",
+      "title": "InvoicePacket",
+      "description": "Catalog entry for InvoicePacket card",
       "ref": {
-        "module": "http://local-realm/line-item",
-        "name": "LineItem"
+        "module": "http://local-realm/invoice-packet",
+        "name": "InvoicePacket"
       },
       "demo": {
-        "name": "Enter name",
-        "quantity": 1,
-        "amount": 132,
-        "description": "Enter description"
+        "vendor": {
+          "vendorName": null,
+          "addressLine": null,
+          "city": null,
+          "state": null,
+          "zipCode": null,
+          "email": null,
+          "logo": null
+        },
+        "details": {
+          "invoiceNo": null,
+          "invoiceDate": null,
+          "dueDate": null,
+          "terms": null,
+          "invoiceDocument": null,
+          "memo": null
+        },
+        "lineItems": [],
+        "paymentMethods": []
       }
     },
     "meta": {
       "fields": {
         "demo": {
           "adoptsFrom": {
-            "module": "http://local-realm/line-item",
-            "name": "LineItem"
+            "module": "http://local-realm/invoice-packet",
+            "name": "InvoicePacket"
           }
         }
       },

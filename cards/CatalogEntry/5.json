@@ -2,24 +2,29 @@
   "data": {
     "type": "card",
     "attributes": {
-      "title": "PaymentMethod",
-      "description": "Catalog entry for PaymentMethod card",
+      "title": "PayInvoice",
+      "description": "Catalog entry for PayInvoice card",
       "ref": {
-        "module": "http://local-realm/payment-method",
-        "name": "PaymentMethod"
+        "module": "http://local-realm/pay-invoice",
+        "name": "PayInvoice"
       },
       "demo": {
-        "currencyName": "CURRENCY NAME",
-        "usdValue": "USD Value",
-        "isPrimaryMethod": true
+        "title": "Pay Invoice"
+      }
+    },
+    "relationships": {
+      "demo.vendor": {
+        "links": {
+          "self": "http://local-realm/Vendor/2"
+        }
       }
     },
     "meta": {
       "fields": {
         "demo": {
           "adoptsFrom": {
-            "module": "http://local-realm/payment-method",
-            "name": "PaymentMethod"
+            "module": "http://local-realm/pay-invoice",
+            "name": "PayInvoice"
           }
         }
       },
