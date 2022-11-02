@@ -133,6 +133,7 @@ importers:
       '@types/rsvp': ^4.0.4
       '@typescript-eslint/eslint-plugin': ^5.17.0
       '@typescript-eslint/parser': ^5.17.0
+      animations-experiment: '*'
       babel-eslint: ^10.1.0
       broccoli-asset-rev: ^3.0.0
       date-fns: ^2.28.0
@@ -239,6 +240,7 @@ importers:
       '@types/rsvp': 4.0.4
       '@typescript-eslint/eslint-plugin': 5.41.0_df7bmmpvcdp26iorckypvaliia
       '@typescript-eslint/parser': 5.41.0_3rubbgt5ekhqrcgx4uwls3neim
+      animations-experiment: link:../../animations-experiment/addon
       babel-eslint: 10.1.0_eslint@7.32.0
       broccoli-asset-rev: 3.0.0
       date-fns: 2.29.3

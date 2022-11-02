@@ -1,6 +1,5 @@
 import { parse } from 'date-fns';
 import {
-  Realm,
   Kind,
   RealmAdapter,
   FileRef,
@@ -9,7 +8,8 @@ import {
   baseRealm,
   type Card,
   type CardAPI,
-} from '@cardstack/runtime-common';
+} from '@cardstack/runtime-common/index';
+import { Realm } from '@cardstack/runtime-common/realm';
 import { RealmPaths, LocalPath } from '@cardstack/runtime-common/paths';
 
 export function cleanWhiteSpace(text: string) {
