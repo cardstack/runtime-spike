@@ -41,7 +41,8 @@ export default class Preview extends Component<Signature> {
   transition = (changeset: Changeset): AnimationDefinition => {
     return {
       timeline: {
-        parallel: [
+        type: 'parallel',
+        animations: [
           {
             sprites: changeset.keptSprites,
             properties: {
