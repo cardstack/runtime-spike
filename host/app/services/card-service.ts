@@ -51,10 +51,14 @@ export default class CardService extends Service {
 
   async createFromSerialized(json: LooseSingleCardDocument): Promise<Card> {
     await this.apiModule.loaded;
-    let card = await this.api.createFromSerialized(json, this.localRealm.url, {
-      loader: this.loaderService.loader,
-    });
-    await this.api.recompute(card);
+    let card = await this.api.createFromSerialized(
+      json.data,
+      json,
+      this.localRealm.url,
+      {
+        loader: this.loaderService.loader,
+      }
+    );
     await this.api.recompute(card, { loadFields: true });
     return card;
   }
