@@ -1208,7 +1208,7 @@ module('Integration | serialization', function (hooks) {
   });
 
   test('can serialize a composite field that has been edited', async function(assert) {
-    let { field, contains, serializeCard, Card, Component, createFromSerialized } = cardApi;
+    let { field, contains, serializeCard, Card, Component } = cardApi;
     let { default: StringCard } = string;
     let { default: IntegerCard} = integer;
     class Person extends Card {
