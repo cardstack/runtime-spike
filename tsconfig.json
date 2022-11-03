@@ -27,7 +27,10 @@
       "//local-realm/*": ["cards/*"],
       "cards": ["cards/*"],
       "*": ["host/types/*"],
-      "//cdn.skypack.dev/lodash": ["node_modules/@types/lodash"]
+      "//cdn.skypack.dev/lodash": ["node_modules/@types/lodash"],
+      "@cardstack/boxel-motion/*": [
+        "host/node_modules/@cardstack/boxel-motion/addon/*"
+      ]
     }
   },
   "glint": {

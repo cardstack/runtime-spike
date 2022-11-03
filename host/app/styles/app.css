@@ -13,14 +13,14 @@ button {
   min-width: 8rem;
 }
 .file-tree + div {
-  flex-grow: 3;
+  min-width: 50rem;
 }
 .polling-button {
   margin-top: 3rem;
 }
 .preview {
-  flex-grow: 2;
   min-width: 10rem;
+  padding: 1rem;
 }
 
 .preview > * + * {

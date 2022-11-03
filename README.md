@@ -4,6 +4,13 @@
 
 - you will want the [Glint](https://marketplace.visualstudio.com/items?itemName=typed-ember.glint-vscode) vscode extension
 - this project uses [pnpm](https://pnpm.io/) for package management. run `pnpm install` to install the project dependencies first.
+- this project currently assumes a pnpm link to the `@cardstack/boxel-motion` project. Make sure to run:
+    ```sh
+    cd host
+    pnpm link ../../boxel-motion/addon
+    cd ..
+    pnpm install
+    ```
 
 ## Orientation
 
@@ -14,6 +21,7 @@
 `realm-server` is a node app that serves the realm as an HTTP server
 
 The top-level of the monorepo contains typescript & glint setting for the ember app, because Glint doesn't like monorepos.
+
 
 ## Running the App
 In order to run app
