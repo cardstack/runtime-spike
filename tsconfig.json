@@ -28,8 +28,8 @@
       "cards": ["cards/*"],
       "*": ["host/types/*"],
       "//cdn.skypack.dev/lodash": ["node_modules/@types/lodash"],
-      "animations-experiment/*": [
-        "host/node_modules/animations-experiment/addon/*"
+      "@cardstack/boxel-motion/*": [
+        "host/node_modules/@cardstack/boxel-motion/addon/*"
       ]
     }
   },

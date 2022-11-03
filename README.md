@@ -4,10 +4,10 @@
 
 - you will want the [Glint](https://marketplace.visualstudio.com/items?itemName=typed-ember.glint-vscode) vscode extension
 - this project uses [pnpm](https://pnpm.io/) for package management. run `pnpm install` to install the project dependencies first.
-- this project currently assumes a pnpm link to the `animations-experiement` project. Make sure to run:
+- this project currently assumes a pnpm link to the `@cardstack/boxel-motion` project. Make sure to run:
     ```sh
     cd host
-    pnpm link ../../animations-experiment/addon
+    pnpm link ../../boxel-motion/addon
     cd ..
     pnpm install
     ```
