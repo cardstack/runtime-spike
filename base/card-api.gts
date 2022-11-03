@@ -794,25 +794,13 @@ export function serializeCard(
   return doc;
 }
 
-export async function createFromSerialized<T extends CardConstructor>(CardClass: T, data: T extends { [primitive]: infer P } ? P : LooseSingleCardDocument, opts?: { loader?: Loader }): Promise<CardInstanceType<T>>;
-export async function createFromSerialized<T extends CardConstructor>(doc: LooseSingleCardDocument, relativeTo: URL | undefined, opts?: { loader?: Loader}): Promise<CardInstanceType<T>>;
-export async function createFromSerialized<T extends CardConstructor>(cardClassOrDoc: T | LooseSingleCardDocument, dataOrRelativeTo?: any | URL, opts?: { loader?: Loader }): Promise<CardInstanceType<T>> {
-  let card: T;
-  let data: any;
-  let loader = opts?.loader ?? Loader;
-  if (isSingleCardDocument(cardClassOrDoc)){
-    let relativeTo = dataOrRelativeTo instanceof URL ? dataOrRelativeTo : undefined;
-    let { meta: { adoptsFrom } } = cardClassOrDoc.data;
-    let module = await loader.import<Record<string, T>>(new URL(adoptsFrom.module, relativeTo).href);
-    card = module[adoptsFrom.name];
-    data = cardClassOrDoc;
-  } else if ("baseCard" in cardClassOrDoc) {
-    card = cardClassOrDoc;
-    data = dataOrRelativeTo;
-  } else {
-    throw new Error(`don't know how to serialize ${JSON.stringify(cardClassOrDoc, null, 2)}`);
-  }
-  return await _createFromSerialized(card, data, undefined);
+export async function createFromSerialized<T extends CardConstructor>(resource: LooseCardResource, doc: LooseSingleCardDocument, relativeTo: URL | undefined, opts?: { loader?: Loader}): Promise<CardInstanceType<T>> {
+  let loader = opts?.loader ?? Loader;  
+  let { meta: { adoptsFrom } } = resource;
+  let module = await loader.import<Record<string, T>>(new URL(adoptsFrom.module, relativeTo).href);
+  let card = module[adoptsFrom.name];
+  
+  return await _createFromSerialized(card, resource as any, doc);
 }
 
 export async function updateFromSerialized<T extends CardConstructor>(instance: CardInstanceType<T>, doc: LooseSingleCardDocument): Promise<CardInstanceType<T>> {
@@ -1174,7 +1162,7 @@ async function loadField<T extends Card, K extends keyof T>(model: T, fieldName:
           if (!isSingleCardDocument(json)) {
             throw new Error(`instance ${e.reference} is not a card document. it is: ${JSON.stringify(json, null, 2)}`);
           }
-          deserialized.set(fieldName as string, await createFromSerialized(json, undefined, { loader }));
+          deserialized.set(fieldName as string, await createFromSerialized(json.data, json, undefined, { loader }));
           continue;
         } else {
           isLoaded = true;
