@@ -7,7 +7,11 @@ const webpack = require('webpack');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 module.exports = function (defaults) {
-  let app = new EmberApp(defaults, {});
+  let app = new EmberApp(defaults, {
+    'ember-cli-babel': {
+      enableTypeScriptTransform: true,
+    },
+  });
   return compatBuild(app, Webpack, {
     staticAddonTrees: true,
     staticAddonTestSupportTrees: true,
@@ -34,7 +38,6 @@ module.exports = function (defaults) {
           new MonacoWebpackPlugin(),
           new webpack.ProvidePlugin({
             process: 'process',
-            Buffer: 'buffer',
           }),
         ],
         resolve: {
