@@ -9,15 +9,6 @@
         "name": "InvoicePacket"
       },
       "demo": {
-        "vendor": {
-          "vendorName": null,
-          "addressLine": null,
-          "city": null,
-          "state": null,
-          "zipCode": null,
-          "email": null,
-          "logo": null
-        },
         "details": {
           "invoiceNo": null,
           "invoiceDate": null,
@@ -28,6 +19,13 @@
         },
         "lineItems": [],
         "paymentMethods": []
+      }
+    },
+    "relationships": {
+      "demo.vendor": {
+        "links": {
+          "self": "http://local-realm/Vendor/2"
+        }
       }
     },
     "meta": {

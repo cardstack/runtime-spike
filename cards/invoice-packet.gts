@@ -1,4 +1,4 @@
-import { contains, containsMany, field, Card, Component } from 'https://cardstack.com/base/card-api';
+import { contains, containsMany, linksTo, field, Card, Component } from 'https://cardstack.com/base/card-api';
 import IntegerCard from 'https://cardstack.com/base/integer';
 import { Vendor } from './vendor';
 import { Details } from './details';
@@ -82,7 +82,7 @@ let css =`
 let styleSheet = initStyleSheet(css);
 
 export class InvoicePacket extends Card {
-  @field vendor = contains(Vendor);
+  @field vendor = linksTo(Vendor);
   @field details = contains(Details);
   @field lineItems = containsMany(LineItem);
   @field paymentMethods = containsMany(PaymentMethod);

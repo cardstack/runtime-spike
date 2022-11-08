@@ -1,16 +1,14 @@
 {
   "data": {
     "type": "card",
-    "attributes": {
+    "relationships": {
       "vendor": {
-        "vendorName": "Smart Contract",
-        "addressLine": "50 California St Ste 1500",
-        "city": "San Francisco",
-        "state": "CA",
-        "zipCode": 94111,
-        "email": "finance@smartcontract.com",
-        "logo": null
-      },
+        "links": {
+          "self": "http://local-realm/Vendor/1"
+        }
+      }
+    },
+    "attributes": {
       "details": {
         "invoiceNo": "1868",
         "invoiceDate": "2022-03-04",
