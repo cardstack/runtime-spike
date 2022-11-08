@@ -89,31 +89,14 @@ module('Integration | card-editor', function (hooks) {
         }
       }
     `);
-    await realm.write('treat.gts',`
-      import { contains, field, Component, Card } from "https://cardstack.com/base/card-api";
-      import StringCard from "https://cardstack.com/base/string";
-
-      export class Treat extends Card {
-        @field name = contains(StringCard);
-        static embedded = class Embedded extends Component<typeof this> {
-          <template>
-            <div data-test-treat={{@model.name}}>
-              <@fields.name/>
-            </div>
-          </template>
-        }
-      }
-    `);
     await realm.write('person.gts',`
-      import { contains, containsMany, linksTo, field, Component, Card } from "https://cardstack.com/base/card-api";
+      import { contains, linksTo, field, Component, Card } from "https://cardstack.com/base/card-api";
       import StringCard from "https://cardstack.com/base/string";
       import { Pet } from "./pet";
-      import { Treat } from "./treat";
 
       export class Person extends Card {
         @field firstName = contains(StringCard);
         @field pet = linksTo(Pet);
-        @field petTreats = containsMany(Treat);
       }
     `);
     await realm.write('Pet/mango.json', JSON.stringify({
@@ -167,11 +150,7 @@ module('Integration | card-editor', function (hooks) {
         type: 'card',
         id: `${testRealmURL}Person/hassan`,
         attributes: {
-          firstName: 'Hassan',
-          petTreats: [
-            { name: 'triple twist chew' },
-            { name: 'dog biscuits' }
-          ]
+          firstName: 'Hassan'
         },
         relationships: {
           pet: {
