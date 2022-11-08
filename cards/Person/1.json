@@ -5,7 +5,10 @@
       "firstName": "Hassan",
       "lastName": "Abdel-Rahman",
       "isCool": false,
-      "isHuman": true
+      "isHuman": true,
+      "petTreats": [
+        { "name": "Yak Chews" }
+      ]
     },
     "relationships": {
       "pet": {
