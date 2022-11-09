@@ -9,22 +9,25 @@
         "name": "InvoicePacket"
       },
       "demo": {
-        "details": {
-          "invoiceNo": null,
-          "invoiceDate": null,
-          "dueDate": null,
-          "terms": null,
-          "invoiceDocument": null,
-          "memo": null
-        },
+        "invoiceNo": null,
+        "invoiceDate": null,
+        "dueDate": null,
+        "terms": null,
+        "invoiceDocument": null,
+        "memo": null,
         "lineItems": [],
-        "paymentMethods": []
+        "primaryPayment": {
+          "currency": null,
+          "logo": null,
+          "exchangeRate": null
+        },
+        "alternatePayments": []
       }
     },
     "relationships": {
       "demo.vendor": {
         "links": {
-          "self": "http://local-realm/Vendor/2"
+          "self": null
         }
       }
     },

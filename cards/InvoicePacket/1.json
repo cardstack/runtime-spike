@@ -9,14 +9,12 @@
       }
     },
     "attributes": {
-      "details": {
-        "invoiceNo": "1868",
-        "invoiceDate": "2022-03-04",
-        "dueDate": "2022-04-04",
-        "terms": "Net 30",
-        "invoiceDocument": "Invoice_1868_-_ MatzoShoes.pdf ",
-        "memo": "Cash payment possible"
-      },
+      "invoiceNo": "1868",
+      "invoiceDate": "2022-03-04",
+      "dueDate": "2022-04-04",
+      "terms": "Net 30",
+      "invoiceDocument": "Invoice_1868_-_ MatzoShoes.pdf ",
+      "memo": "Cash payment possible",
       "lineItems": [
         {
           "name": "Reference Contract:ETH-USD (xDAI)",
@@ -31,26 +29,26 @@
           "description": "January - March Activity"
         }
       ],
-      "paymentMethods": [
+      "primaryPayment": {
+        "currency": "LINK",
+        "logo": null,
+        "exchangeRate": 0.0552
+      },
+      "alternatePayments": [
         {
-          "currencyName": "USD",
-          "value": "$135.00 USD",
-          "isPrimaryMethod": false
+          "currency": "USD",
+          "logo": null,
+          "exchangeRate": 1
         },
         {
-          "currencyName": "USDC",
-          "value": "135 USDC",
-          "isPrimaryMethod": false
+          "currency": "USDC",
+          "logo": null,
+          "exchangeRate": 1
         },
         {
-          "currencyName": "DAI",
-          "value": "135 DAI",
-          "isPrimaryMethod": false
-        },
-        {
-          "currencyName": "LINK",
-          "value": "7.46 LINK",
-          "isPrimaryMethod": true
+          "currency": "DAI",
+          "logo": null,
+          "exchangeRate": 1
         }
       ]
     },
