@@ -781,9 +781,9 @@ function serializeCardResource(
   }
 ): LooseCardResource {
   let adoptsFrom = Loader.identify(model.constructor);
-  // if (!adoptsFrom) {
-  //   throw new Error(`bug: encountered a card that has no Loader identity: ${model.constructor.name}`);
-  // }
+  if (!adoptsFrom) {
+    throw new Error(`bug: encountered a card that has no Loader identity: ${model.constructor.name}`);
+  }
   let { id: removedIdField, ...fields } = getFields(model, opts);
   let fieldResources = Object.keys(fields)
     .map(fieldName => serializedGet(model, fieldName, doc));
@@ -829,9 +829,9 @@ async function _createFromSerialized<T extends CardConstructor>(
     return card[deserialize](data);
   }
   let resource: LooseCardResource = data;
-  // if (isCardResource(data)) {
-  //   resource = data;
-  // }
+  if (isCardResource(data)) {
+    resource = data;
+  }
   if (!resource) {
     let adoptsFrom = Loader.identify(card);
     if (!adoptsFrom) {
@@ -914,9 +914,9 @@ export async function searchDoc<CardT extends CardConstructor>(model: InstanceTy
 
 function makeMetaForField(meta: Partial<Meta> | undefined, fieldName: string, fallback: typeof Card): Meta {
   let adoptsFrom = meta?.adoptsFrom ?? Loader.identify(fallback);
-  // if (!adoptsFrom) {
-  //   throw new Error(`bug: cannot determine identity for field '${fieldName}'`);
-  // }
+  if (!adoptsFrom) {
+    throw new Error(`bug: cannot determine identity for field '${fieldName}'`);
+  }
   let fields: NonNullable<LooseCardResource["meta"]["fields"]> = { ...(meta?.fields ?? {}) };
   return {
     adoptsFrom,
@@ -926,9 +926,9 @@ function makeMetaForField(meta: Partial<Meta> | undefined, fieldName: string, fa
 
 async function cardClassFromResource<CardT extends CardConstructor>(resource: LooseCardResource | undefined, fallback: CardT): Promise<CardT> {
   let cardIdentity = Loader.identify(fallback);
-  // if (!cardIdentity) {
-  //   throw new Error(`bug: could not determine identity for card '${fallback.name}'`);
-  // }
+  if (!cardIdentity) {
+    throw new Error(`bug: could not determine identity for card '${fallback.name}'`);
+  }
   if (resource && cardIdentity && (cardIdentity.module !== resource.meta.adoptsFrom.module || cardIdentity.name !== resource.meta.adoptsFrom.name)) {
     let loader = Loader.getLoaderFor(fallback);
     let module = await loader.import<Record<string, CardT>>(resource.meta.adoptsFrom.module);
