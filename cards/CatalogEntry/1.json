@@ -9,17 +9,10 @@
         "name": "Person"
       },
       "demo": {
-        "firstName": "Burcu",
-        "lastName": "Noyan",
-        "isCool": true,
-        "isHuman": true
-      }
-    },
-    "relationships": {
-      "demo.pet": {
-        "links": {
-          "self": "http://local-realm/Pet/4"
-        }
+        "firstName": "Mango",
+        "lastName": "Abdel-Rahman",
+        "isCool": false,
+        "isHuman": false
       }
     },
     "relationships": {

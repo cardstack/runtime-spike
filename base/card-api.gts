@@ -1425,7 +1425,6 @@ interface ContainsManySignature {
 class ContainsManyEditor extends GlimmerComponent<ContainsManySignature> {
   <template>
     <section data-test-contains-many={{this.args.field.name}}>
-      <header>{{this.args.field.name}}</header>
       <ul>
         {{#each @arrayField.children as |boxedElement i|}}
           <li data-test-item={{i}}>

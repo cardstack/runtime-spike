@@ -8,16 +8,6 @@ import { PaymentMethod } from './payment-method';
 import { initStyleSheet, attachStyles } from 'https://cardstack.com/base/attach-styles';
 
 let invoiceStyles = initStyleSheet(`
-  @font-face {
-    font-family: "Open Sans";
-    src: url("./fonts/OpenSans-Regular.ttf");
-    font-weight: 400;
-  }
-  @font-face {
-    font-family: "Open Sans";
-    src: url("./fonts/OpenSans-Bold.ttf");
-    font-weight: 700;
-  }
   this {
     max-width: 50rem;
     background-color: #fff; 
@@ -135,10 +125,7 @@ class LineItem extends Card {
   };
 }
 
-function balanceInCurrency (balance: number, exchangeRate: number, currency: string) {
-  if (balance == null || exchangeRate == null) {
-    return 0;
-  }
+function balanceInCurrency (balance = 0, exchangeRate = 0, currency: string) {
   let total = balance * exchangeRate;
   if (currency === 'USD') {
     return formatUSD(total);
@@ -147,7 +134,7 @@ function balanceInCurrency (balance: number, exchangeRate: number, currency: str
   }
 }
 
-function formatUSD(amount: number) {
+function formatUSD(amount = 0) {
   return `$ ${amount.toFixed(2)} USD`;
 }
 
