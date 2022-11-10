@@ -828,7 +828,7 @@ async function _createFromSerialized<T extends CardConstructor>(
   if (primitive in card) {
     return card[deserialize](data);
   }
-  let resource: LooseCardResource = data;
+  let resource: LooseCardResource | undefined;
   if (isCardResource(data)) {
     resource = data;
   }
@@ -929,7 +929,7 @@ async function cardClassFromResource<CardT extends CardConstructor>(resource: Lo
   if (!cardIdentity) {
     throw new Error(`bug: could not determine identity for card '${fallback.name}'`);
   }
-  if (resource && cardIdentity && (cardIdentity.module !== resource.meta.adoptsFrom.module || cardIdentity.name !== resource.meta.adoptsFrom.name)) {
+  if (resource && (cardIdentity.module !== resource.meta.adoptsFrom.module || cardIdentity.name !== resource.meta.adoptsFrom.name)) {
     let loader = Loader.getLoaderFor(fallback);
     let module = await loader.import<Record<string, CardT>>(resource.meta.adoptsFrom.module);
     return module[resource.meta.adoptsFrom.name];
