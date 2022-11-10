@@ -9,12 +9,14 @@
       }
     },
     "attributes": {
-      "invoiceNo": "1868",
-      "invoiceDate": "2022-03-04",
-      "dueDate": "2022-04-04",
-      "terms": "Net 30",
-      "invoiceDocument": "Invoice_1868_-_ MatzoShoes.pdf ",
-      "memo": "Cash payment possible",
+      "details": {
+        "invoiceNo": "1868",
+        "invoiceDate": "2022-03-04",
+        "dueDate": "2022-04-04",
+        "terms": "Net 30",
+        "invoiceDocument": "Invoice_1868_-_ MatzoShoes.pdf ",
+        "memo": "Cash payment possible"
+      },
       "lineItems": [
         {
           "name": "Reference Contract:ETH-USD (xDAI)",
