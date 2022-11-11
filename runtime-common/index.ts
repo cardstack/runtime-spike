@@ -118,6 +118,7 @@ export type {
 } from "./search-index";
 export {
   isMeta,
+  isExportedCardRef,
   isCardResource,
   isCardDocument,
   isRelationship,
@@ -155,11 +156,13 @@ export async function chooseCard<T extends Card>(
 }
 
 export interface CardCreator {
-  create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T>;
+  create<T extends Card>(
+    cardOrRef: Card | ExportedCardRef
+  ): Promise<undefined | T>;
 }
 
 export async function createNewCard<T extends Card>(
-  ref: ExportedCardRef
+  cardOrRef: Card | ExportedCardRef
 ): Promise<undefined | T> {
   let here = globalThis as any;
   if (!here._CARDSTACK_CREATE_NEW_CARD) {
@@ -169,7 +172,7 @@ export async function createNewCard<T extends Card>(
   }
   let cardCreator: CardCreator = here._CARDSTACK_CREATE_NEW_CARD;
 
-  return await cardCreator.create<T>(ref);
+  return await cardCreator.create<T>(cardOrRef);
 }
 
 export function hasExecutableExtension(path: string): boolean {

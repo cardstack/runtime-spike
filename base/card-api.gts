@@ -1456,15 +1456,42 @@ interface LinksToEditorSignature {
     field: Field<typeof Card>;
   }
 }
+
+let linksToEditorStyles = initStyleSheet(`
+  this { 
+    background-color: #fff; 
+    border: 1px solid #ddd;
+    border-radius: 20px; 
+    padding: 1rem; 
+  }
+  button {
+    margin-top: 1rem;
+    font: inherit;
+    font-weight: 600;
+    border: none;
+    background-color: white;
+    padding: 0.5em 0;
+    text-transform: capitalize;
+  }
+  button:hover {
+    color: #00EBE5;
+  }
+`);
 class LinksToEditor extends GlimmerComponent<LinksToEditorSignature> {
   <template>
-    <button {{on "click" this.choose}} data-test-choose-card>Choose</button>
-    <button {{on "click" this.remove}} data-test-remove-card disabled={{this.isEmpty}}>Remove</button>
-    {{#if this.isEmpty}}
-      <div data-test-empty-link>[empty]</div>
-    {{else}}
-      <this.linkedCard/>
-    {{/if}}
+    <div {{attachStyles linksToEditorStyles}}>
+      {{#if this.isEmpty}}
+        <div data-test-empty-link>{{!-- PLACEHOLDER CONTENT --}}</div>
+        <button {{on "click" this.choose}} data-test-choose-card>
+          + Add {{@field.name}}
+        </button>
+      {{else}}
+        <this.linkedCard/>
+        <button {{on "click" this.remove}} data-test-remove-card disabled={{this.isEmpty}}>
+          Remove {{@field.name}}
+        </button>
+      {{/if}}
+    </div>
   </template>
 
   choose = () => {

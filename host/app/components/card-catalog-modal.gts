@@ -8,9 +8,11 @@ import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency';
 import type { Card } from 'https://cardstack.com/base/card-api';
 import type { Query } from '@cardstack/runtime-common/query';
+import { createNewCard } from '@cardstack/runtime-common';
 import { Deferred } from '@cardstack/runtime-common/deferred';
 import { getSearchResults, Search } from '../resources/search';
 import Preview from './preview';
+import { eq } from '../helpers/truth-helpers';
 
 export default class CardCatalogModal extends Component {
   <template>
@@ -24,6 +26,11 @@ export default class CardCatalogModal extends Component {
           {{#if this.currentRequest.search.isLoading}}
             Loading...
           {{else}}
+            {{#let this.currentRequest.search.instances.[0] as |card|}}
+              {{#unless (eq card.constructor.name "CatalogEntry")}}
+                <button {{on "click" (fn this.createNew card)}}>Create New {{card.constructor.name}}</button>
+              {{/unless}}
+            {{/let}}
             <ul class="card-catalog" data-test-card-catalog>
               {{#each this.currentRequest.search.instances as |card|}}
                 <li data-test-card-catalog-item={{card.id}}>
@@ -77,6 +84,11 @@ export default class CardCatalogModal extends Component {
       this.currentRequest.deferred.resolve(card);
       this.currentRequest = undefined;
     }
+  }
+
+  @action async createNew(card: Card): Promise<void> {
+    let newCard = await createNewCard(card);
+    this.pick(newCard);
   }
 }
 
