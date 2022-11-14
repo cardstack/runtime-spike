@@ -27,8 +27,10 @@ export default class CardCatalogModal extends Component {
             Loading...
           {{else}}
             {{#let this.currentRequest.search.instances.[0] as |card|}}
+              {{!-- TODO: what if there were no existing instances --}}
+              {{!-- TODO: when there are specialized versions of the type, which one to create? --}}
               {{#unless (eq card.constructor.name "CatalogEntry")}}
-                <button {{on "click" (fn this.createNew card)}}>Create New {{card.constructor.name}}</button>
+                <button {{on "click" (fn this.createNew card)}} data-test-create-new>Create New {{card.constructor.name}}</button>
               {{/unless}}
             {{/let}}
             <ul class="card-catalog" data-test-card-catalog>
