@@ -8,11 +8,10 @@ import { taskFor } from 'ember-concurrency-ts';
 import { enqueueTask } from 'ember-concurrency';
 import type { Card } from 'https://cardstack.com/base/card-api';
 import type { Query } from '@cardstack/runtime-common/query';
-import { createNewCard } from '@cardstack/runtime-common';
+import { createNewCard, type ExportedCardRef } from '@cardstack/runtime-common';
 import { Deferred } from '@cardstack/runtime-common/deferred';
 import { getSearchResults, Search } from '../resources/search';
 import Preview from './preview';
-import { eq } from '../helpers/truth-helpers';
 
 export default class CardCatalogModal extends Component {
   <template>
@@ -26,13 +25,9 @@ export default class CardCatalogModal extends Component {
           {{#if this.currentRequest.search.isLoading}}
             Loading...
           {{else}}
-            {{#let this.currentRequest.search.instances.[0] as |card|}}
-              {{!-- TODO: what if there were no existing instances --}}
-              {{!-- TODO: when there are specialized versions of the type, which one to create? --}}
-              {{#unless (eq card.constructor.name "CatalogEntry")}}
-                <button {{on "click" (fn this.createNew card)}} data-test-create-new>Create New {{card.constructor.name}}</button>
-              {{/unless}}
-            {{/let}}
+            {{#if this.currentRequest.opts.offerToCreate}}
+              <button {{on "click" (fn this.createNew this.currentRequest.opts.offerToCreate)}} data-test-create-new>Create New</button>
+            {{/if}}
             <ul class="card-catalog" data-test-card-catalog>
               {{#each this.currentRequest.search.instances as |card|}}
                 <li data-test-card-catalog-item={{card.id}}>
@@ -54,6 +49,7 @@ export default class CardCatalogModal extends Component {
   @tracked currentRequest: {
     search: Search;
     deferred: Deferred<Card | undefined>;
+    opts?: { offerToCreate?: ExportedCardRef };
   } | undefined = undefined;
 
   constructor(owner: unknown, args: {}) {
@@ -64,14 +60,15 @@ export default class CardCatalogModal extends Component {
     });
   }
 
-  async chooseCard<T extends Card>(query: Query): Promise<undefined | T> {
-    return await taskFor(this._chooseCard).perform(query) as T | undefined;
+  async chooseCard<T extends Card>(query: Query, opts?: { offerToCreate: ExportedCardRef }): Promise<undefined | T> {
+    return await taskFor(this._chooseCard).perform(query, opts) as T | undefined;
   }
 
-  @enqueueTask private async _chooseCard<T extends Card>(query: Query): Promise<undefined | T> {
+  @enqueueTask private async _chooseCard<T extends Card>(query: Query, opts?: { offerToCreate: ExportedCardRef }): Promise<undefined | T> {
     this.currentRequest = {
       search: getSearchResults(this, () => query),
       deferred: new Deferred(),
+      opts
     };
     let card = await this.currentRequest.deferred.promise;
     if (card) {
@@ -88,8 +85,8 @@ export default class CardCatalogModal extends Component {
     }
   }
 
-  @action async createNew(card: Card): Promise<void> {
-    let newCard = await createNewCard(card);
+  @action async createNew(ref: ExportedCardRef): Promise<void> {
+    let newCard = await createNewCard(ref);
     this.pick(newCard);
   }
 }

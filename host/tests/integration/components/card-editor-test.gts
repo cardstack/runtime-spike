@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import GlimmerComponent from '@glimmer/component';
 import { setupRenderingTest } from 'ember-qunit';
 import { Loader, baseRealm, LooseSingleCardDocument } from '@cardstack/runtime-common';
@@ -380,7 +380,7 @@ module('Integration | card-editor', function (hooks) {
     assert.shadowDOM('[data-test-choose-card]').exists();
   });
 
-  test('can create (or specialize) a new card to populate a linksTo field', async function (assert) {
+  test('can create a new card to populate a linksTo field', async function (assert) {
     let card = await loadCard(`${testRealmURL}Person/mariko`);
     await renderComponent(
       class TestDriver extends GlimmerComponent {
@@ -414,4 +414,6 @@ module('Integration | card-editor', function (hooks) {
     assert.shadowDOM('[data-test-pet="Simba"]').exists();
     assert.shadowDOM('[data-test-pet="Simba"]').hasText('Simba');
   });
+
+  skip('can create a specialized a new card to populate a linksTo field');
 });

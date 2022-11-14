@@ -31,13 +31,6 @@ export type CardRef =
       field: string;
     };
 
-export function isExportedCardRef(ref: any): ref is ExportedCardRef {
-  if (!("module" in ref) || !("name" in ref)) {
-    return false;
-  }
-  return typeof ref.module === "string" && typeof ref.name === "string";
-}
-
 export function isCardRef(ref: any): ref is CardRef {
   if (typeof ref !== "object") {
     return false;
@@ -46,7 +39,10 @@ export function isCardRef(ref: any): ref is CardRef {
     return false;
   }
   if (ref.type === "exportedCard") {
-    return isExportedCardRef(ref);
+    if (!("module" in ref) || !("name" in ref)) {
+      return false;
+    }
+    return typeof ref.module === "string" && typeof ref.name === "string";
   } else if (ref.type === "ancestorOf") {
     if (!("card" in ref)) {
       return false;

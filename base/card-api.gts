@@ -1515,23 +1515,10 @@ class LinksToEditor extends GlimmerComponent<LinksToEditorSignature> {
   }
 
   @restartableTask private async chooseCard(this: LinksToEditor) {
-    let currentlyChosen = !this.isEmpty ? (this.args.model.value as any)["id"] as string : undefined;
     let type = Loader.identify(this.args.field.card) ?? baseCardRef;
     let chosenCard = await chooseCard(
-      {
-        filter: {
-          every: [
-            { type },
-            // omit the currently chosen card from the chooser
-            ...(currentlyChosen ? [{
-              not: {
-                eq: { id: currentlyChosen },
-                on: baseCardRef,
-              }
-            }] : [])
-          ]
-        }
-      }
+      { filter: { type }},
+      { offerToCreate: type }
     );
     if (chosenCard) {
       this.args.model.value = chosenCard;

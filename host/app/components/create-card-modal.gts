@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { isExportedCardRef, type ExportedCardRef } from '@cardstack/runtime-common';
+import type { ExportedCardRef } from '@cardstack/runtime-common';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import { action } from '@ember/object';
@@ -19,7 +19,7 @@ export default class CreateCardModal extends Component {
       {{#if card}}
         <dialog class="dialog-box" open data-test-create-new-card={{card.constructor.name}}>
           <header class="dialog-box__header">
-            <h1>Create New Card: {{card.constructor.name}}</h1>
+            <h1>Create New Card</h1>
             <button {{on "click" (fn this.save undefined)}} type="button">X Close</button>
           </header>
           <section class="dialog-box__content">
@@ -47,20 +47,14 @@ export default class CreateCardModal extends Component {
     });
   }
 
-  async create<T extends Card>(cardOrRef: Card | ExportedCardRef): Promise<undefined | T> {
-      return await taskFor(this._create).perform(cardOrRef) as T | undefined;
+  async create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    return await taskFor(this._create).perform(ref) as T | undefined;
   }
 
-  @enqueueTask private async _create<T extends Card>(cardOrRef: Card | ExportedCardRef): Promise<undefined | T> {
-    let newCard;
-    if (isExportedCardRef(cardOrRef)) {
-      let doc = { data: { meta: { adoptsFrom: cardOrRef }}};
-      newCard = await this.cardService.createFromSerialized(doc.data, doc);
-    } else {
-      newCard = await this.cardService.saveModel(new (cardOrRef as Card).constructor());
-    }
+  @enqueueTask private async _create<T extends Card>(ref: ExportedCardRef): Promise<undefined | T> {
+    let doc = { data: { meta: { adoptsFrom: ref }}};
     this.currentRequest = {
-      card: newCard,
+      card: await this.cardService.createFromSerialized(doc.data, doc),
       deferred: new Deferred(),
     };
     let card = await this.currentRequest.deferred.promise;
