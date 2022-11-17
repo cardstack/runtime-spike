@@ -30,7 +30,8 @@ import {
   type LooseCardResource,
   type LooseSingleCardDocument,
   type CardDocument,
-  type CardResource
+  type CardResource,
+  type ExportedCardRef
 } from '@cardstack/runtime-common';
 export const primitive = Symbol('cardstack-primitive');
 export const serialize = Symbol('cardstack-serialize');
@@ -867,6 +868,18 @@ async function getDeserializedValue<CardT extends CardConstructor>({
   return result;
 }
 
+function getExportedAncestorRef(card: typeof Card | null): ExportedCardRef | null {
+  if (card == null) {
+    return null;
+  }
+  let adoptsFrom = Loader.identify(card);
+  if (!adoptsFrom) {
+    let parent = Reflect.getPrototypeOf(card) as typeof Card | null;
+    return getExportedAncestorRef(parent);
+  }
+  return adoptsFrom;
+}
+
 function serializeCardResource(
   model: Card,
   doc: JSONAPISingleResourceDocument,
@@ -875,7 +888,7 @@ function serializeCardResource(
   },
   visited: Set<string> = new Set()
 ): LooseCardResource {
-  let adoptsFrom = Loader.identify(model.constructor);
+  let adoptsFrom = getExportedAncestorRef(model.constructor);
   if (!adoptsFrom) {
     throw new Error(`bug: encountered a card that has no Loader identity: ${model.constructor.name}`);
   }
@@ -1032,7 +1045,7 @@ export async function searchDoc<CardT extends CardConstructor>(instance: Instanc
 
 
 function makeMetaForField(meta: Partial<Meta> | undefined, fieldName: string, fallback: typeof Card): Meta {
-  let adoptsFrom = meta?.adoptsFrom ?? Loader.identify(fallback);
+  let adoptsFrom = meta?.adoptsFrom ?? getExportedAncestorRef(fallback);
   if (!adoptsFrom) {
     throw new Error(`bug: cannot determine identity for field '${fieldName}'`);
   }
@@ -1044,7 +1057,7 @@ function makeMetaForField(meta: Partial<Meta> | undefined, fieldName: string, fa
 }
 
 async function cardClassFromResource<CardT extends CardConstructor>(resource: LooseCardResource | undefined, fallback: CardT): Promise<CardT> {
-  let cardIdentity = Loader.identify(fallback);
+  let cardIdentity = getExportedAncestorRef(fallback);
   if (!cardIdentity) {
     throw new Error(`bug: could not determine identity for card '${fallback.name}'`);
   }
@@ -1473,6 +1486,14 @@ export class Box<T> {
     }
   }
 
+  get containingBoxType() {
+    if (this.state.type === 'root') {
+      return undefined;
+    } else {
+      return this.state.containingBox.value.constructor;
+    }
+  }
+
   get name() {
     return this.state.type === 'derived' ? this.state.fieldName : undefined;
   }
@@ -1657,7 +1678,14 @@ class LinksToEditor extends GlimmerComponent<LinksToEditorSignature> {
   }
 
   @restartableTask private async chooseCard(this: LinksToEditor) {
-    let type = Loader.identify(this.args.field.card) ?? baseCardRef;
+    let type = Loader.identify(this.args.field.card);
+    if (!type) {
+      let containingType = Loader.identify(this.args.model.containingBoxType);
+      type = containingType?.module ? {
+        module: containingType.module,
+        name: this.args.field.card.name,
+      } : baseCardRef;
+    }
     let chosenCard = await chooseCard(
       { filter: { type }},
       { offerToCreate: type }

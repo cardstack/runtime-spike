@@ -43,6 +43,7 @@ export class Post extends Card {
   @field title = contains(StringCard);
   @field body = contains(TextAreaCard);
   @field titleRef = contains(VeryBasicCard);
+  @field linkedRef = linksTo(VeryBasicCard);
   static isolated = class Isolated extends Component<typeof this> {
     <template>
       <div {{attachStyles styles}}>
