@@ -1,5 +1,7 @@
 # Rough work-in-progress
 
+## ⚠️⚠WARNING⚠️⚠: This repository has been deprecated. All activity for this codebase has moved to the repo: https://github.com/cardstack/boxel-motion
+
 ## Setup
 
 - you will want the [Glint](https://marketplace.visualstudio.com/items?itemName=typed-ember.glint-vscode) vscode extension
